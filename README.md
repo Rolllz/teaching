@@ -25,7 +25,9 @@ cd /mnt/vagrant
 #качаем туда архив с исходниками, на месте распаковываем и переходим в директорию с ними
 
 wget https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.7.tar.xz
+
 tar xvf linux-6.7.tar.xz
+
 cd linux-6.7
 
 #копируем текущий конфиг ядра в папку с исходниками
@@ -39,30 +41,43 @@ yes "" | make oldconfig
 #выполняем сборку
 
 make -j$(($(nproc)+1))
+
 sudo make modules_install
+
 sudo make install
 
 #обновляем версию ядра, а также GRUB
 
 sudo update-initramfs -c -k 6.7.0
+
 sudo update-grub
 
 #устанавливаем загрузку по умолчанию нового ядра
 
 sudo grep gnulinux /boot/grub/grub.conf | grep "6.7.0' --class" > /tmp/version_of_kernel.txt
+
 sudo su
+
 export VE=$(awk -F"'" '{print 4}' <<< cat /tmp/version_of_kernel.txt)
+
 echo "DEFAULT_GRUB=$VE" >> /etc/default/grub
+
 exit
 
 #перезагружаемся и восстанавливаем Virtualbox Shared Folder
 
 sudo shutdown -r now
+
 wget --no-check-certificate 'https://docs.google.com/uc?export=download&id=1MNt-MkbD-am9jkY8WXoT7JbL0XXxHAWc' -O /tmp/VboxGuestAdditions.iso
+
 sudo mkdir /mnt/iso
+
 sudo mount -o loop /tmp/VboxGuestAdditions.iso /mnt/iso
+
 cd /mnt/iso
+
 sudo ./autorun.sh
+
 sudo mount -t vboxfs mnt_vagrant /mnt/vagrant
 
 #на всякий случай очищаем пакетный менеджер от лишних пакетов
