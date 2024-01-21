@@ -36,13 +36,16 @@ Vagrant.configure("2") do |config|
 			yes "" | make oldconfig
 			make -j$(($(nproc)+1)) -s
 			sudo make modules_install -s
-			echo "установка, создание образа ядра и обновление GRUB"
+			echo "установка, создание образа ядра и обновление GRUB..."
 			sudo make install
 			#sudo update-initramfs -c -k 6.7.0
 			#sudo update-grub
 			#sudo grep gnulinux /boot/grub/grub.cfg | grep "6.7.0' --class" | awk -F"'" '{print $4}' > ./version_of_kernel.txt
 			#sudo export VE=$(cat ./version_of_kernel.txt)
 			#sudo echo "DEFAULT_GRUB=$VE" >> /etc/default/grub
+			echo "Удаление архива и директории с исходниками..."
+			sudo rm -r ./linux-6.7
+			rm linux-6.7.tar.xz
 			echo "Перезагрузка..."
 			sudo shutdown -r now
 			sudo mkdir /mnt/iso
@@ -50,7 +53,7 @@ Vagrant.configure("2") do |config|
 			cd /mnt/iso
 			sudo ./autorun.sh
 			sudo mount -t vboxfs mnt_vagrant /vagrant
-			sudo autoremove -y
+			sudo apt autoremove -y
 			uname -r
 		SHELL
 	end
