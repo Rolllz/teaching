@@ -23,8 +23,9 @@ Vagrant.configure("2") do |config|
 		config.vm.provision "shell", inline: <<-SHELL
 			sudo apt-get update
 			sudo apt-get install -y gcc cmake ncurses-dev libssl-dev bc flex libelf-dev bison git fakeroot build-essential xz-utils lsb-release software-properties-common apt-transport-https ca-certificates curl dwarves dkms
-			sudo rm /boot/initrd*
-			sudo rm /boot/vmlinuz*
+			#Если раздел /boot слишком маленький, можно удалить предыдущие образы ядра, иначе для нового не хватит свободного места
+			#sudo rm /boot/initrd*
+			#sudo rm /boot/vmlinuz*
 			wget https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.7.tar.xz
 			wget --no-check-certificate 'https://docs.google.com/uc?export=download&id=1MNt-MkbD-am9jkY8WXoT7JbL0XXxHAWc' -O ./VboxGuestAdditions.iso
 			echo "Распаковка архива..."
@@ -35,6 +36,7 @@ Vagrant.configure("2") do |config|
 			yes "" | make oldconfig
 			make -j$(($(nproc)+1)) -s
 			sudo make modules_install -s
+			echo "установка, создание образа ядра и обновление GRUB"
 			sudo make install
 			#sudo update-initramfs -c -k 6.7.0
 			#sudo update-grub
