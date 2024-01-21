@@ -50,11 +50,16 @@ sudo update-initramfs -c -k 6.7.0
 
 sudo update-grub
 
+Предыдущее действие не обязательно, так как команда make install сама сгенерирует образ ядра и файл vmlinuz и положит их в директорию /boot
+
+
 #устанавливаем загрузку по умолчанию нового ядра
 
 sudo grep gnulinux /boot/grub/grub.conf | grep "6.7.0' --class" | awk -F"'" '{print $4}' > ./version_of_kernel.txt
 
 sudo echo "DEFAULT_GRUB=$(cat ./version_of_kernel.txt)" >> /etc/default/grub
+
+Данное действие необходимо в случае, если другие версии ядра уже не нужны. В дополнение можно удалить все предыдущие версии командой sudo rm /boot/vmlinuz* /boot/initrd* перед компиляцией ядра, тогда загрузку по умолчанию можно не выполнять
 
 #перезагружаемся и восстанавливаем Virtualbox Shared Folder
 
