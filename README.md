@@ -67,6 +67,12 @@ sudo echo "DEFAULT_GRUB=$(cat ./version_of_kernel.txt)" >> /etc/default/grub
 
 #Данное действие необходимо в случае, если другие версии ядра уже не нужны. В дополнение можно удалить все предыдущие версии командой sudo rm /boot/vmlinuz* /boot/initrd* перед компиляцией ядра, тогда загрузку по умолчанию можно не выполнять
 
+#удаляем архив и директорисю с исходниками
+
+sudo rm -r ./linux-6.7
+
+rm linux-6.7.tar.xz
+
 
 #перезагружаемся и восстанавливаем Virtualbox Shared Folder
 
@@ -85,7 +91,7 @@ sudo mount -t vboxfs mnt_vagrant /mnt/vagrant
 
 #на всякий случай очищаем пакетный менеджер от лишних пакетов
 
-sudo autoremove -y
+sudo apt autoremove -y
 
 #выводим на экран текущую версию ядра
 
