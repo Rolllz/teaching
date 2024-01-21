@@ -54,9 +54,7 @@ sudo update-grub
 
 sudo grep gnulinux /boot/grub/grub.cfg | grep "6.7.0' --class" | awk -F"'" '{print $4}' > ./version_of_kernel.txt
 
-sudo export VE=$(cat ./version_of_kernel.txt)
-
-echo "DEFAULT_GRUB=$VE" >> /etc/default/grub
+sudo echo "DEFAULT_GRUB=$(cat ./version_of_kernel.txt)" >> /etc/default/grub
 
 exit
 
