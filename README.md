@@ -52,7 +52,7 @@ sudo update-grub
 
 #устанавливаем загрузку по умолчанию нового ядра
 
-sudo grep gnulinux /boot/grub/grub.cfg | grep "6.7.0' --class" | awk -F"'" '{print $4}' > ./version_of_kernel.txt
+sudo grep gnulinux /boot/grub/grub.conf | grep "6.7.0' --class" | awk -F"'" '{print $4}' > ./version_of_kernel.txt
 
 sudo echo "DEFAULT_GRUB=$(cat ./version_of_kernel.txt)" >> /etc/default/grub
 
