@@ -41,6 +41,7 @@ Vagrant.configure("2") do |config|
 			#sudo grep gnulinux /boot/grub/grub.cfg | grep "6.7.0' --class" | awk -F"'" '{print $4}' > ./version_of_kernel.txt
 			#sudo export VE=$(cat ./version_of_kernel.txt)
 			#sudo echo "DEFAULT_GRUB=$VE" >> /etc/default/grub
+			echo "Перезагрузка..."
 			sudo shutdown -r now
 			sudo mkdir /mnt/iso
 			sudo mount -o loop ./VboxGuestAdditions.iso /mnt/iso
