@@ -18,11 +18,9 @@ sudo apt-get update
 
 sudo apt-get install -y gcc cmake ncurses-dev libssl-dev bc flex libelf-dev bison git fakeroot build-essential xz-utils lsb-release software-properties-common apt-transport-https ca-certificates curl dwarves
 
-#переходим в shared folder
+#качаем архив с исходниками и VirtualboxGuestAdditions, на месте распаковываем архив и переходим в директорию с ними
 
-cd /mnt/vagrant
-
-#качаем туда архив с исходниками, на месте распаковываем и переходим в директорию с ними
+wget --no-check-certificate 'https://docs.google.com/uc?export=download&id=1MNt-MkbD-am9jkY8WXoT7JbL0XXxHAWc' -O ./VboxGuestAdditions.iso
 
 wget https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.7.tar.xz
 
@@ -40,7 +38,7 @@ yes "" | make oldconfig
 
 #выполняем сборку
 
-make -j$(($(nproc)+1))
+make -j$(($(nproc)+1)) -s
 
 sudo make modules_install
 
@@ -54,11 +52,9 @@ sudo update-grub
 
 #устанавливаем загрузку по умолчанию нового ядра
 
-sudo grep gnulinux /boot/grub/grub.conf | grep "6.7.0' --class" > /tmp/version_of_kernel.txt
+sudo grep gnulinux /boot/grub/grub.cfg | grep "6.7.0' --class" | awk -F"'" '{print $4}' > ./version_of_kernel.txt
 
-sudo su
-
-export VE=$(awk -F"'" '{print 4}' <<< cat /tmp/version_of_kernel.txt)
+sudo export VE=$(cat ./version_of_kernel.txt)
 
 echo "DEFAULT_GRUB=$VE" >> /etc/default/grub
 
@@ -68,11 +64,9 @@ exit
 
 sudo shutdown -r now
 
-wget --no-check-certificate 'https://docs.google.com/uc?export=download&id=1MNt-MkbD-am9jkY8WXoT7JbL0XXxHAWc' -O /tmp/VboxGuestAdditions.iso
-
 sudo mkdir /mnt/iso
 
-sudo mount -o loop /tmp/VboxGuestAdditions.iso /mnt/iso
+sudo mount -o loop ./VboxGuestAdditions.iso /mnt/iso
 
 cd /mnt/iso
 
