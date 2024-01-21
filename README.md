@@ -56,8 +56,6 @@ sudo grep gnulinux /boot/grub/grub.cfg | grep "6.7.0' --class" | awk -F"'" '{pri
 
 sudo echo "DEFAULT_GRUB=$(cat ./version_of_kernel.txt)" >> /etc/default/grub
 
-exit
-
 #перезагружаемся и восстанавливаем Virtualbox Shared Folder
 
 sudo shutdown -r now
