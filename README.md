@@ -14,9 +14,11 @@
 
 sudo apt-get update
 
-#установка необходимых для компиляции ядра пакетов
 
-sudo apt-get install -y gcc cmake ncurses-dev libssl-dev bc flex libelf-dev bison git fakeroot build-essential xz-utils lsb-release software-properties-common apt-transport-https ca-certificates curl dwarves
+#установка и обновление необходимых для компиляции ядра пакетов
+
+sudo apt-get install -y gcc cmake ncurses-dev libssl-dev bc flex libelf-dev bison git fakeroot build-essential xz-utils lsb-release software-properties-common apt-transport-https ca-certificates curl dwarves dkms
+
 
 #качаем архив с исходниками и VirtualboxGuestAdditions, на месте распаковываем архив и переходим в директорию с ними
 
@@ -28,21 +30,25 @@ tar xvf linux-6.7.tar.xz
 
 cd linux-6.7
 
+
 #копируем текущий конфиг ядра в папку с исходниками
 
 cp -v /boot/config-$(uname -r) .config
+
 
 #выполняем make menuconfig для этого конфига, чтобы он был заточен под текущие настройки
 
 yes "" | make oldconfig
 
+
 #выполняем сборку
 
 make -j$(($(nproc)+1)) -s
 
-sudo make modules_install
+sudo make modules_install -s
 
 sudo make install
+
 
 #обновляем версию ядра, а также GRUB
 
@@ -59,7 +65,8 @@ sudo grep gnulinux /boot/grub/grub.conf | grep "6.7.0' --class" | awk -F"'" '{pr
 
 sudo echo "DEFAULT_GRUB=$(cat ./version_of_kernel.txt)" >> /etc/default/grub
 
-Данное действие необходимо в случае, если другие версии ядра уже не нужны. В дополнение можно удалить все предыдущие версии командой sudo rm /boot/vmlinuz* /boot/initrd* перед компиляцией ядра, тогда загрузку по умолчанию можно не выполнять
+#Данное действие необходимо в случае, если другие версии ядра уже не нужны. В дополнение можно удалить все предыдущие версии командой sudo rm /boot/vmlinuz* /boot/initrd* перед компиляцией ядра, тогда загрузку по умолчанию можно не выполнять
+
 
 #перезагружаемся и восстанавливаем Virtualbox Shared Folder
 
@@ -74,6 +81,7 @@ cd /mnt/iso
 sudo ./autorun.sh
 
 sudo mount -t vboxfs mnt_vagrant /mnt/vagrant
+
 
 #на всякий случай очищаем пакетный менеджер от лишних пакетов
 
