@@ -1,98 +1,51 @@
-Занятие 1. Vagrant-стенд для обновления ядра и создания образа системы
+Занятие 1. Первые шаги с Ansible
 
 Цель домашнего задания
-Научиться обновлять ядро в ОС Linux. Получение навыков работы с Vagrant. 
+Написать первые шаги с Ansible.
 
 Описание домашнего задания
-1) Запустить ВМ с помощью Vagrant.
-2) Обновить ядро ОС из репозитория ELRepo.
-3) Оформить отчет в README-файле в GitHub-репозитории.
+  Подготовить стенд на Vagrant как минимум с одним сервером. На этом сервере, используя Ansible необходимо развернуть nginx со следующими условиями:
+- необходимо использовать модуль yum/apt
+- конфигурационный файлы должны быть взяты из шаблона jinja2 с
+переменными
+- после установки nginx должен быть в режиме enabled в systemd
+- должен быть использован notify для старта nginx после установки
+- сайт должен слушать на нестандартном порту - 8080, для этого использовать переменные в Ansible
+* Сделать все это с использованием Ansible роли
 
-В данном ДЗ был использован Debian 12. После установки и запуска ОС выполняются следующие команды:
+В данном ДЗ был использован Debian 12.
+После установки и запуска ОС выполняются следующие команды:
 
-#обновление репозиториев
+#Находим в ssh-конфиге строчку с авторизованными ключами и раскомментируем
 
-sudo apt-get update
+sudo sed -i 's/\#AuthorizedKeysFile/AuthorizedKeysFile/g' /etc/ssh/sshd_config
 
+#Находим в ssh-конфиге строчку с подключением по публичному ключу и раскомментируем
 
-#установка и обновление необходимых для компиляции ядра пакетов
+sudo sed -i 's/\#PubkeyAuthentication yes/PubkeyAuthentication yes/g' /etc/ssh/sshd_config
 
-sudo apt-get install -y gcc cmake ncurses-dev libssl-dev bc flex libelf-dev bison git fakeroot build-essential xz-utils lsb-release software-properties-common apt-transport-https ca-certificates curl dwarves dkms
+#Перезапускаем службу для возможности подключения без пароля
 
+sudo systemctl restart sshd
 
-#качаем архив с исходниками и VirtualboxGuestAdditions, на месте распаковываем архив и переходим в директорию с ними
+Описанные выше команды выполняются в Vagrantfile.
 
-wget --no-check-certificate 'https://docs.google.com/uc?export=download&id=1MNt-MkbD-am9jkY8WXoT7JbL0XXxHAWc' -O ./VboxGuestAdditions.iso
+Далее в хостовой ОС выполняем следующие действия:
 
-wget https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.7.tar.xz
+#Удаляем все записи с нашими параметрами, чтобы можно было подключиться без пароля
 
-tar xvf linux-6.7.tar.xz
+ssh-keygen -f ~/.ssh/known_hosts -R "[127.0.0.1]:2222"
 
-cd linux-6.7
+#Копируем ключ на гостевую машину
 
+ssh-copy-id -p 2222 vagrant@127.0.0.1
 
-#копируем текущий конфиг ядра в папку с исходниками
+Сначала отвечаем yes, затем вводим пароль vagrant
 
-cp -v /boot/config-$(uname -r) .config
+После этого запускаем наш playbook:
 
+ansible-playbook nginx.yml
 
-#выполняем make menuconfig для этого конфига, чтобы он был заточен под текущие настройки
+После установки и настройки веб-сервера запускаем проверочную команду
 
-yes "" | make oldconfig
-
-
-#выполняем сборку
-
-make -j$(($(nproc)+1)) -s
-
-sudo make modules_install -s
-
-sudo make install
-
-
-#обновляем версию ядра, а также GRUB
-
-sudo update-initramfs -c -k 6.7.0
-
-sudo update-grub
-
-Предыдущее действие не обязательно, так как команда make install сама сгенерирует образ ядра и файл vmlinuz и положит их в директорию /boot
-
-
-#устанавливаем загрузку по умолчанию нового ядра
-
-sudo grep gnulinux /boot/grub/grub.conf | grep "6.7.0' --class" | awk -F"'" '{print $4}' > ./version_of_kernel.txt
-
-sudo echo "DEFAULT_GRUB=$(cat ./version_of_kernel.txt)" >> /etc/default/grub
-
-#Данное действие необходимо в случае, если другие версии ядра уже не нужны. В дополнение можно удалить все предыдущие версии командой sudo rm /boot/vmlinuz* /boot/initrd* перед компиляцией ядра, тогда загрузку по умолчанию можно не выполнять
-
-#удаляем архив и директорисю с исходниками
-
-sudo rm -r ./linux-6.7
-
-rm linux-6.7.tar.xz
-
-
-#перезагружаемся и восстанавливаем Virtualbox Shared Folder
-
-sudo shutdown -r now
-
-sudo mkdir /mnt/iso
-
-sudo mount -o loop ./VboxGuestAdditions.iso /mnt/iso
-
-cd /mnt/iso
-
-sudo ./autorun.sh
-
-sudo mount -t vboxfs mnt_vagrant /mnt/vagrant
-
-
-#на всякий случай очищаем пакетный менеджер от лишних пакетов
-
-sudo apt autoremove -y
-
-#выводим на экран текущую версию ядра
-
-uname -r
+curl 192.168.56.150:8080
