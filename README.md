@@ -17,38 +17,12 @@ Vagrantfile, который сразу собирает систему с под
 Перенести работающую систему с одним диском на RAID 1. Даунтайм на загрузку с нового диска предполагается.
 
 В данном ДЗ был использован Debian 12.
+Для работы Vagrant необходимы плагины vagrant, virtualbox, vagrant-reload, vagrant-disksize.
 После установки и запуска ОС выполняются следующие команды:
 
-#Находим в ssh-конфиге строчку с авторизованными ключами и раскомментируем
+sudo apt update
 
-sudo sed -i 's/\#AuthorizedKeysFile/AuthorizedKeysFile/g' /etc/ssh/sshd_config
+sudo apt install -y mdadm smartmontools hdparm gdisk lshw parted
 
-#Находим в ssh-конфиге строчку с подключением по публичному ключу и раскомментируем
+sudo modprobe {raid{0,1,5,6,10},linear,multipath}
 
-sudo sed -i 's/\#PubkeyAuthentication yes/PubkeyAuthentication yes/g' /etc/ssh/sshd_config
-
-#Перезапускаем службу для возможности подключения без пароля
-
-sudo systemctl restart sshd
-
-Описанные выше команды выполняются в Vagrantfile.
-
-Далее в хостовой ОС выполняем следующие действия:
-
-#Удаляем все записи с нашими параметрами, чтобы можно было подключиться без пароля
-
-ssh-keygen -f ~/.ssh/known_hosts -R "[127.0.0.1]:2222"
-
-#Копируем ключ на гостевую машину
-
-ssh-copy-id -p 2222 vagrant@127.0.0.1
-
-Сначала отвечаем yes, затем вводим пароль vagrant
-
-После этого запускаем наш playbook:
-
-ansible-playbook nginx.yml
-
-После установки и настройки веб-сервера запускаем проверочную команду
-
-curl 192.168.56.150:8080
