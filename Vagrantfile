@@ -1,60 +1,91 @@
+# -*- mode: ruby -*-
+# vim: set ft=ruby :
+
 MACHINES = {
-	:"kernel-update" => {
-		:box_name => "generic/debian12",
-		:box_version => "4.3.12",
-		:cpus => 6,
-		:memory => 8192,
+  :otuslinux => {
+        :box_name => "generic/debian12",
+        :current_dir => File.dirname(File.expand_path(__FILE__)),
+        :ip_addr => '192.168.56.101',
+        :memory => "8192",
+        :cpus => "6",
+        #:disk_ext => '.vdi',
+	:disks => {
+		:sas1 => {
+			:dfile => 'sas1.vdi',
+                        :size => "133120",
+			:port => 1
+		},
+		:sas2 => {
+			:dfile => 'sas2.vdi',
+                        :size => "133120",
+			:port => 2
+		},
+                :sas3 => {
+			:dfile => 'sas3.vdi',
+                        :size => "133120",
+			:port => 3
+		},
+                :sas4 => {
+			:dfile => 'sas4.vdi',
+                        :size => "133120",
+			:port => 4
+		},
+                :sas5 => {
+			:dfile => 'sas5.vdi',
+                        :size => "133120",
+			:port => 5
+		},
+                :sas6 => {
+			:dfile => 'sas6.vdi',
+                        :size => "133120",
+			:port => 6
+		}
 	}
+  },
 }
 
 Vagrant.configure("2") do |config|
-	MACHINES.each do |boxname, boxconfig|
-		config.vm.synced_folder ".", "/vagrant"#, disabled: true
-		#config.vm.synced_folder "/mnt/flash/sync", "/mnt/vagrant", disabled: false
-		config.vm.define boxname do |box|
-			box.vm.box = boxconfig[:box_name]
-			box.vm.box_version = boxconfig[:box_version]#"> 4.3.10"
-			box.vm.host_name = boxname.to_s
-			box.vm.provider "virtualbox" do |v|
-				v.memory = boxconfig[:memory]
-				v.cpus = boxconfig[:cpus]
-			end
-		end
-		config.vm.provision "shell", inline: <<-SHELL
-			sudo apt-get update
-			sudo apt-get install -y gcc cmake ncurses-dev libssl-dev bc flex libelf-dev bison git fakeroot build-essential xz-utils lsb-release software-properties-common apt-transport-https ca-certificates curl dwarves dkms
-			#Если раздел /boot слишком маленький, можно удалить предыдущие образы ядра, иначе для нового не хватит свободного места
-			#sudo rm /boot/initrd*
-			#sudo rm /boot/vmlinuz*
-			wget https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.7.tar.xz
-			wget --no-check-certificate 'https://docs.google.com/uc?export=download&id=1MNt-MkbD-am9jkY8WXoT7JbL0XXxHAWc' -O ./VboxGuestAdditions.iso
-			echo "Распаковка архива..."
-			tar xf linux-6.7.tar.xz
-			cd linux-6.7
-			cp -v /boot/config-$(uname -r) .config
-			echo "Сборка ядра..."
-			yes "" | make oldconfig
-			make -j$(($(nproc)+1)) -s
-			sudo make modules_install -s
-			echo "установка, создание образа ядра и обновление GRUB..."
-			sudo make install
-			#sudo update-initramfs -c -k 6.7.0
-			#sudo update-grub
-			#sudo grep gnulinux /boot/grub/grub.cfg | grep "6.7.0' --class" | awk -F"'" '{print $4}' > ./version_of_kernel.txt
-			#sudo export VE=$(cat ./version_of_kernel.txt)
-			#sudo echo "DEFAULT_GRUB=$VE" >> /etc/default/grub
-			echo "Удаление архива и директории с исходниками..."
-			sudo rm -r ./linux-6.7
-			rm linux-6.7.tar.xz
-			echo "Перезагрузка..."
-			sudo shutdown -r now
-			sudo mkdir /mnt/iso
-			sudo mount -o loop ./VboxGuestAdditions.iso /mnt/iso
-			cd /mnt/iso
-			sudo ./autorun.sh
-			sudo mount -t vboxfs mnt_vagrant /vagrant
-			sudo apt autoremove -y
-			uname -r
-		SHELL
-	end
+
+        MACHINES.each do |boxname, boxconfig|
+
+                config.vm.define boxname do |box|
+
+                        box.vm.box = boxconfig[:box_name]
+                        box.vm.host_name = boxname.to_s
+
+
+                        #box.vm.network "forwarded_port", guest: 3260, host: 3260+offset
+
+                        box.vm.network "private_network", ip: boxconfig[:ip_addr]
+                        box.vm.synced_folder ".", "/vagrant", disabled: false
+                        box.vm.provider :virtualbox do |vb|
+                                vb.cpus = boxconfig[:cpus]
+                                vb.memory = boxconfig[:memory]
+                                #vb.customize ["modifyvm", :id, "--memory", boxconfig[:memory]]
+                                #vb.customize ["modifyvm", :id, "--cpus", boxconfig[:cpus]]
+                                needsController = false
+                                boxconfig[:disks].each do |dname, dconf|
+                                        #disk =  boxconfig[:current_dir] + "/" + dconf[:dfile]# + boxconfig[:disk_ext]
+                                        if !File.exists?(dconf[:dfile])
+                                                #puts "Fail"
+                                                vb.customize ['createhd', '--filename', dconf[:dfile], '--variant', 'Standard', '--size', dconf[:size]]
+                                                needsController = true
+                                        end
+                                end
+                                if needsController == true
+                                vb.customize ["storagectl", :id, "--name", "SAS", "--add", "sas" ]
+                                end
+                                boxconfig[:disks].each do |dname, dconf|
+                                vb.customize ['storageattach', :id,  '--storagectl', 'SAS', '--port', dconf[:port], '--device', 0, '--type', 'hdd', '--medium', dconf[:dfile]]
+                                end
+                        end
+                        box.vm.provision "shell", path: "./script1.sh"
+                        box.vm.provision :reload
+                        box.vm.provision "shell", path: "./script2.sh"
+                        box.vm.provision :reload
+                        box.vm.provision "shell", inline: <<-SHELL
+                                lsblk > /vagrant/file2.txt
+                        SHELL
+                end
+        end
 end
