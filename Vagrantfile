@@ -66,7 +66,7 @@ Vagrant.configure("2") do |config|
                                 needsController = false
                                 boxconfig[:disks].each do |dname, dconf|
                                         #disk =  boxconfig[:current_dir] + "/" + dconf[:dfile]# + boxconfig[:disk_ext]
-                                        if !File.exists?(dconf[:dfile])
+                                        unless File.exists?(dconf[:dfile])
                                                 #puts "Fail"
                                                 vb.customize ['createhd', '--filename', dconf[:dfile], '--variant', 'Standard', '--size', dconf[:size]]
                                                 needsController = true
