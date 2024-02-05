@@ -59,7 +59,11 @@ echo "Генерируем образы ..."
 
 cd /boot
 
-for i in $(ls initramfs-*img); do ii=${i#initramfs-}; ii=${ii%.img}; dracut $i $ii --force; done
+for i in $(ls initramfs-*img); do
+ii=${i#initramfs-};
+ii=${ii%.img};
+dracut $i $ii --force;
+done
 
 echo "Подменяем строчку в конфиге ..."
 
