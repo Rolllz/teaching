@@ -1,101 +1,112 @@
-Занятие 5. Дисковая подсистема. Работа с mdadm.
+Занятие 5. Файловые системы и LVM.
 
 Цель домашнего задания
-Научиться использовать утилиту для управления программными RAID-массивами в Linux
+создавать и работать с логическими томами
 
 Описание домашнего задания
-- добавить в Vagrantfile еще дисков;
-- сломать/починить raid;
-- собрать R0/R5/R10 на выбор;
-- прописать собранный рейд в конф, чтобы рейд собирался при загрузке;
-- создать GPT раздел и 5 партиций.
+- на имеющемся образе (centos/7 1804.2)
+https://gitlab.com/otus_linux/stands-03-lvm
 
-Доп. задание*
-Vagrantfile, который сразу собирает систему с подключенным рейдом и смонтированными разделами. После перезагрузки стенда разделы должны автоматически примонтироваться.
+/dev/mapper/VolGroup00-LogVol00 38G 738M 37G 2% /
 
-Задание повышенной сложности**
-Перенести работающую систему с одним диском на RAID 1. Даунтайм на загрузку с нового диска предполагается.
+уменьшить том под / до 8G
+выделить том под /home
+выделить том под /var (/var - сделать в mirror)
+для /home - сделать том для снэпшотов
+прописать монтирование в fstab (попробовать с разными опциями и разными файловыми системами на выбор)
+
+Работа со снапшотами:
+сгенерировать файлы в /home/
+снять снэпшот
+удалить часть файлов
+восстановиться со снэпшота
 
 В данном ДЗ был использован Debian 12.
 Для работы Vagrant необходимы плагины vagrant, virtualbox, vagrant-reload, vagrant-disksize.
 После установки и запуска ОС выполняются следующие команды:
 
-lsblk > /vagrant/file1.txt
+echo "Устанавливаем пакетики ..."
+yum install -y -q mdadm smartmontools hdparm gdisk device-mapper lvm2 xfsdump
+#yes "vagrant" | passwd root
+echo "Создаем временный раздел под / ..."
+vgcreate vg_root /dev/sdb && lvcreate -n lv_root -l +100%FREE /dev/vg_root
+mkfs.xfs /dev/vg_root/lv_root && mount /dev/vg_root/lv_root /mnt
+echo "Создаем дампик папочки, восстанавливаем его в другую папочку и монтируем всё в нее ..."
+xfsdump -v silent -J - /dev/VolGroup00/LogVol00 | xfsrestore -v silent -J - /mnt
+for i in /proc/ /sys/ /dev/ /run/ /boot/; do mount --bind $i /mnt/$i; done
+cp -r /vagrant/scripts /mnt
+echo "Делаем chroot ..."
+chroot /mnt/ /bin/bash /scripts/script2.sh
 
-sudo apt update #обновляем и устанавливаем необходимые для работы пакеты
+Команды в файле script2.sh следующие:
 
-sudo apt install -y mdadm smartmontools hdparm gdisk lshw parted
+echo "Конфигурируем граб ..."
+grub2-mkconfig -o /boot/grub2/grub.cfg
+echo "Генерируем образы ..."
+cd /boot
+for i in $(ls initramfs-*img); do ii=${i#initramfs-}; ii=${ii%.img}; dracut $i $ii --force; done
+echo "Подменяем строчку в конфиге ..."
+sed -i "s/VolGroup00/vg_root/g" /boot/grub2/grub.cfg
+sed -i "s/LogVol00/lv_root/g" /boot/grub2/grub.cfg
 
-sudo modprobe {raid{0,1,5,6,10},linear,multipath} #подгружаем модули работы с raid-массивами
+Далее машина перезагружается, и выполняются следующте команды:
 
-На этом выполнение первого скрипта заканчивается, и запускается триггер перезагрузки
+echo "Меняем размер старого логического раздела ..."
+yes "y" | lvremove /dev/VolGroup00/LogVol00
+yes "y" | lvcreate -n VolGroup00/LogVol00 -L 8G /dev/VolGroup00
+echo "Создаем файловую систему на нем и копируем все обратно ..."
+mkfs.xfs /dev/VolGroup00/LogVol00
+xfsdump -v silent -J - /dev/vg_root/lv_root | xfsrestore -v silent -J - /mnt
+echo "Монтируем все обратно ..."
+for i in /proc/ /sys/ /dev/ /run/ /boot/; do mount --bind $i /mnt/$i; done
+mv /scripts /mnt/scripts
+echo "Делаем chroot ..."
+chroot /mnt/ /bin/bash /scripts/script4.sh
 
-После перезагрузки выполняется второй скрипт:
+Команды в файле script4.sh следующие:
 
-#Зачищаем суперблоки на дисках
+echo "Конфигурируем граб ..."
+grub2-mkconfig -o /boot/grub2/grub.cfg
+echo "Генерируем образы ядер заново ..."
+cd /boot
+for i in $(ls initramfs-*img); do ii=${i#initramfs-}; ii=${ii%.img}; dracut $i $ii --force; done
+echo "Создаем логический раздел под /var ..."
+vgcreate vg_var /dev/sdc /dev/sdd
+lvcreate -L 950M -m1 -n lv_var vg_var
+echo "Создаем файловую систему и копируем все из старой /var ..."
+mkfs.ext4 /dev/vg_var/lv_var
+cp -aR /var/* /mnt/
+mkdir /tmp/oldvar && mv /var/* /tmp/oldvar
+echo "Размонтируем chroot ..."
+umount /mnt
+echo "Монтируем новую папку под /var ..."
+mount /dev/vg_var/lv_var /var
+echo "Обновляем fstab ..."
+echo "$(blkid | grep var: | awk '{print $2}') /var ext4 defaults 0 0" >> /etc/fstab
 
-sudo mdadm --zero-superblock --force /dev/sd{b..g}
+Далее ещё одна перезагрузка, после чего выполняется последняя часть:
 
-#создаем два массива: один - для тестирования, второй - для переноса системы
-
-yes "y" | sudo mdadm --create --verbose /dev/md0 -l 10 -n 4 /dev/sd{b..e}
-
-yes "y" | sudo mdadm --create --verbose /dev/md1 -l 1 -n 2 /dev/sd[fg]
-
-#Записываем данные массивов в конфиг
-
-sudo chmod 777 /etc/mdadm/mdadm.conf
-
-echo "DEVICE partitions" > /etc/mdadm/mdadm.conf
-
-sudo mdadm --detail --scan --verbose | awk '/ARRAY/ {print}' >> /etc/mdadm/mdadm.conf
-
-sudo chmod 644 /etc/mdadm/mdadm.conf
-
-#ломаем и восстанавливаем один из дисков
-sudo mdadm /dev/md0 --fail /dev/sde
-sudo mdadm /dev/md0 --remove /dev/sde
-sudo mdadm /dev/md0 --add /dev/sde
-
-#Создаем таблицу разделов
-sudo parted -s /dev/md0 mklabel gpt
-
-#Создаем разделы
-
-sudo parted /dev/md0 mkpart primary ext4 0% 20%
-
-sudo parted /dev/md0 mkpart primary ext4 20% 40%
-
-sudo parted /dev/md0 mkpart primary ext4 40% 60%
-
-sudo parted /dev/md0 mkpart primary ext4 60% 80%
-
-sudo parted /dev/md0 mkpart primary ext4 80% 100%
-
-#Создаем папки, монитруем в них разделы и обновляем fstab
-
-for i in $(seq 1 5); do
-
-    sudo mkfs.ext4 /dev/md0p$i
-    
-    sudo mkdir -p /raid/part$i
-    
-    sudo mount /dev/md0p$i /raid/part$i
-    
-    sudo chmod 777 /etc/fstab
-    
-    echo "/dev/md126p$i /raid/part$i ext4 uid=0,gid=0 0 2" >> /etc/fstab
-    
-    sudo chmod 644 /etc/fstab
-    
-done
-
-#Копируем систему на raid 1 и обновляем grub
-
-sudo dd if=/dev/sda of=/dev/md1 bs=100M status=progress
-
-sudo update-grub
-
-Далее запускается еще один триггер на перезагрузку и выполняется последняя команда:
-
-lsblk > /vagrant/file2.txt
+echo "Удаляем временный логический раздел под / ..."
+lvremove -y /dev/vg_root/lv_root && vgremove /dev/vg_root && pvremove /dev/sdb
+echo "Создаем новый логический раздел под домашнюю папку..."
+lvcreate -n LogVol_Home -L 2G /dev/VolGroup00
+mkfs.xfs /dev/VolGroup00/LogVol_Home
+echo "Монтируем этот раздел в /mnt, копируем все из старой домашней папки и затираем ее..."
+mount /dev/VolGroup00/LogVol_Home /mnt/
+cp -aR /home/* /mnt/
+rm -rf /home/*
+echo "Размонтируем /mnt и монтируем новый раздел в /home ..."
+umount /mnt
+mount /dev/VolGroup00/LogVol_Home /home/
+echo "Обновляем fstab ..."
+echo "$(blkid | grep Home | awk '{print $2}') /home xfs defaults 0 0" >> /etc/fstab
+echo "Теперь снапшоты. Создаем 20 файлов в домашней папке ..."
+touch /home/file{1..20}
+echo "Создаем снапшот домашней папки"
+lvcreate -L 100MB -s -n home_snap /dev/VolGroup00/LogVol_Home
+echo "Удаляем некоторые из только что созданных файлов ..."
+rm -f /home/file{11..20}
+echo "Размонтируем /home, восстанваливаем удаленные файлы из снапшота и монтируем /home обратно ..."
+umount /home
+lvconvert --merge /dev/VolGroup00/home_snap
+mount /home
