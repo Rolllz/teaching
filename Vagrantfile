@@ -1,6 +1,5 @@
 # -*- mode: ruby -*-
 # vim: set ft=ruby :
-home = ENV['HOME']
 ENV["LC_ALL"] = "en_US.UTF-8"
 disk_dir = "/share/Virtualbox VMs/"
 disk_size = 512
