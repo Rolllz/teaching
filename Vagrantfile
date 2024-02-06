@@ -56,10 +56,10 @@ MACHINES = {
 
 Vagrant.configure("2") do |config|
 
-    #config.vm.box_version = "1804.2"
     if Vagrant.has_plugin?("vagrant-vbguest") then
         config.vbguest.auto_update = false
     end
+
     MACHINES.each do |boxname, boxconfig|
 
         config.vm.synced_folder ".", "/vagrant", disabled: false
