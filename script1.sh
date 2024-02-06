@@ -28,7 +28,7 @@ zpool status
 zpool get all otus
 zfs get all otus
 zfs get compression otus
-zfs get compressratio otus
+zfs get recordsize otus
 zfs get checksum otus
 wget -O otus_task2.file --no-check-certificate https://drive.usercontent.google.com/download?id=1wgxjih8YZ-cqLqaZVa0lA3h3Y029c3oI&export=download
 cat otus_task2.file | zfs receive otus/test@today
