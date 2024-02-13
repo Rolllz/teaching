@@ -21,6 +21,7 @@ A simple web app
 
 
 %build
+go mod init my_app
 go build -v -o %{name}
 
 
