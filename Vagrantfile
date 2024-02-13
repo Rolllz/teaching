@@ -9,7 +9,6 @@ Vagrant.configure(2) do |config|
         config.vbguest.auto_update = false
     end
 
-    config.vm.synced_folder ".", "/vagrant", disabled: false
     config.vm.box_version = vars[:box_version]
     config.vm.define "rpm" do |box|
 
