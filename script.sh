@@ -11,9 +11,6 @@ tar -c ./my_app-1.0/ -zvf my_app-1.0.tar.gz
 cp my_app-1.0/my_app.spec ~/rpmbuild/SPECS/
 mv my_app-1.0.tar.gz ~/rpmbuild/SOURCES/
 rpmbuild -ba ~/rpmbuild/SPECS/my_app.spec
-#rpm -i ~/rpmbuild/RPMS/x86_64/my_app-1.0-1.el8.x86_64.rpm
-#systemctl start my_app.service
-#curl -L http://localhost:8081
 mkdir /usr/share/nginx/html/repo
 cp ~/rpmbuild/RPMS/x86_64/my_app-1.0-1.el8.x86_64.rpm /usr/share/nginx/html/repo/
 wget https://downloads.percona.com/downloads/percona-distribution-mysql-ps/percona-distribution-mysql-ps-8.0.28/binary/redhat/8/x86_64/percona-orchestrator-3.2.6-2.el8.x86_64.rpm -O /usr/share/nginx/html/repo/percona-orchestrator-3.2.6-2.el8.x86_64.rpm
