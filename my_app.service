@@ -1,0 +1,9 @@
+[Unit]
+Description=My App
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/my_app -config /etc/my_app/config.json
+
+[Install]
+WantedBy=multi-user.target
