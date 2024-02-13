@@ -4,7 +4,6 @@ Release:        1%{?dist}
 Summary:        A simple web app
 
 License:        GPLv3
-URL:            
 Source0:        %{name}-%{version}.tar.gz
 
 BuildRequires:  golang
