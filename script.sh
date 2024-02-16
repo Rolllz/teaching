@@ -1,31 +1,9 @@
 #!/bin/bash -x
 set -m
 
-yum install -y git nginx createrepo
-yum module install -y go-toolset
-yum group install -y "RPM Development Tools"
-rpmdev-setuptree
-git clone --branch=RPM https://github.com/Rolllz/teaching/ && cd teaching
-mkdir my_app-1.0 && mv {"config.json","go.mod","main.go","my_app.service","my_app.spec"} my_app-1.0/
-tar -c ./my_app-1.0/ -zvf my_app-1.0.tar.gz
-cp my_app-1.0/my_app.spec ~/rpmbuild/SPECS/
-mv my_app-1.0.tar.gz ~/rpmbuild/SOURCES/
-rpmbuild -ba ~/rpmbuild/SPECS/my_app.spec
-mkdir /usr/share/nginx/html/repo
-cp ~/rpmbuild/RPMS/x86_64/my_app-1.0-1.el8.x86_64.rpm /usr/share/nginx/html/repo/
-wget https://downloads.percona.com/downloads/percona-distribution-mysql-ps/percona-distribution-mysql-ps-8.0.28/binary/redhat/8/x86_64/percona-orchestrator-3.2.6-2.el8.x86_64.rpm -O /usr/share/nginx/html/repo/percona-orchestrator-3.2.6-2.el8.x86_64.rpm
-createrepo /usr/share/nginx/html/repo
-sed -i "s/location \/ {/location \/ { root \/usr\/share\/nginx\/html;index index.html index.htm;autoindex on;/g" /etc/nginx/nginx.conf
-systemctl restart nginx
-cat >> /etc/yum.repos.d/otus.repo << EOF
-[otus]
-name=otus-linux
-baseurl=http://localhost/repo
-gpgcheck=0
-enabled=1
-EOF
-yum repolist enabled | grep otus
-yum list | grep otus
-yum install my_app -y
-systemctl start my_app.service
-curl -L http://localhost:8081
+vgrename VolGroup00 OtusRoot
+yum install wget -y
+wget https://gist.githubusercontent.com/lalbrekht/ef78c39c236ae223acfb3b5e1970001c/raw/3bdf1d1a374eff4a5696dcea226ae5c4ca4d6374/gistfile1.txt -O /etc/default/grub
+wget https://gist.githubusercontent.com/lalbrekht/1a9cae3cb64ce2dc7bd301e48090bd56/raw/aa1cf0b3fd794d454dfa7fc2770784ef29ae89ea/gistfile1.txt -O /boot/grub2/grub.cfg
+wget https://gist.githubusercontent.com/lalbrekht/cdf6d745d048009dbe619d9920901bf9/raw/f9ae66d2d2fc727791d5ea69d67cc5760c4c5fea/gistfile1.txt -O /etc/fstab
+mkinitrd -f -v /boot/initramfs-$(uname -r).img $(uname -r)
