@@ -8,7 +8,7 @@ wget https://raw.githubusercontent.com/Rolllz/teaching/SYSTEMD/watchlog.log -O /
 chmod +x /opt/watchlog.sh
 wget https://raw.githubusercontent.com/Rolllz/teaching/SYSTEMD/watchlog.service -O /lib/systemd/system/watchlog.service
 wget https://raw.githubusercontent.com/Rolllz/teaching/SYSTEMD/watchlog -O /etc/default/watchlog
-systemctl start watchlog.timer
+systemctl start watchlog.service && systemctl start watchlog.timer
 cat /var/log/syslog | grep Master
 wget https://raw.githubusercontent.com/Rolllz/teaching/SYSTEMD/spawn-fcgi.service -O /lib/systemd/system/spawn-fcgi.service
 wget https://raw.githubusercontent.com/Rolllz/teaching/SYSTEMD/spawn-fcgi -O /etc/default/spawn-fcgi
