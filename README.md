@@ -1,69 +1,53 @@
 Домашнее задание
 
-    Работа с загрузчиком
+    Systemd - создание unit-файла
 
 Цель:
 
-    - научиться попадать в систему без пароля;
-    - устанавливать систему с LVM и переименовывать в VG;
-    - добавлять модуль в initrd;
+    Научиться редактировать существующие и создавать новые unit-файлы
 
 Что нужно сделать?
 
-    1. Попасть в систему без пароля несколькими способами.
-    2. Установить систему с LVM, после чего переименовать VG.
-    3. Добавить модуль в initrd.
+    1. Написать сервис, который будет раз в 30 секунд мониторить лог на предмет наличия ключевого слова. Файл и слово должны задаваться в /etc/sysconfig
+    2. Из epel установить spawn-fcgi и переписать init-скрипт на unit-файл. Имя сервиса должно также называться.
+    3. Дополнить юнит-файл apache httpd возможностью запустить несколько инстансов сервера с разными конфигами
 
-Для системы, которая должна здесь использоваться, не работает ни один способ смены пароля. В шелл попасть можно последними двумя, так как первый способ для Debian-based систем, и то необходимо из параметров удалить все, что связано с консолью.
-
-Однако после смены пароля и перезагрузки пароль меняется на какой-то другой, и выполнить вход невозможно ни под одним пользователем.
-
-В Debian и Ubuntu всё работает отлично.
-
-В названии скрипта на установку модуля должен быть дефис, а не нижнее подчеркивание. Только в этом случае система увидит файл и установит модуль.
-
-Ссылка на пропатченный GRUB в задании со звёздочкой нерабочая, как будто сайт не существует. 
-
-В данной работе была использована ОС Centos 7.
+В данной работе был использован Debian 12.
 
 После запуска ОС выполняются следующие команды:
 
-Переименование VolGroup00:
+Установка необходимых для ДЗ пакетов:
 
-    vgrename VolGroup00 OtusRoot
+    apt install -y apache2 wget rsyslog spawn-fcgi php php-cgi php-cli
 
-Установка wget для скачивания файлов конфигурации:
+Создаем необходимые для сервиса файлы и помещаем их в нужные папки. Для Debian 12 директория /etc/sysconfig заменена на /etc/default, а /usr/lib/systemd/system и /etc/systemd/system на /lib/systemd/system
 
-    yum install -y wget
+    wget https://raw.githubusercontent.com/Rolllz/teaching/SYSTEMD/watchlog.timer -O /lib/systemd/system/watchlog.timer
+    wget https://raw.githubusercontent.com/Rolllz/teaching/SYSTEMD/watchlog.sh -O /opt/watchlog.sh
+    wget https://raw.githubusercontent.com/Rolllz/teaching/SYSTEMD/watchlog.log -O /var/log/watchlog.log
+    chmod +x /opt/watchlog.sh
+    wget https://raw.githubusercontent.com/Rolllz/teaching/SYSTEMD/watchlog.service -O /lib/systemd/system/watchlog.service
+    wget https://raw.githubusercontent.com/Rolllz/teaching/SYSTEMD/watchlog -O /etc/default/watchlog
 
-Скачиваем и сразу заменяем файлы:
+Запускаем сервис, таймер и проверяем нужный нам вывод в логах системы:
 
-    wget https://gist.githubusercontent.com/lalbrekht/ef78c39c236ae223acfb3b5e1970001c/raw/3bdf1d1a374eff4a5696dcea226ae5c4ca4d6374/gistfile1.txt -O /etc/default/grub
-    wget https://gist.githubusercontent.com/lalbrekht/1a9cae3cb64ce2dc7bd301e48090bd56/raw/aa1cf0b3fd794d454dfa7fc2770784ef29ae89ea/gistfile1.txt -O /boot/grub2/grub.cfg
-    wget https://gist.githubusercontent.com/lalbrekht/cdf6d745d048009dbe619d9920901bf9/raw/f9ae66d2d2fc727791d5ea69d67cc5760c4c5fea/gistfile1.txt -O /etc/fstab
-    
-Генерируем новый образ:
+    systemctl start watchlog.service && systemctl start watchlog.timer
+    cat /var/log/syslog | grep Master
 
-    mkinitrd -f -v /boot/initramfs-$(uname -r).img $(uname -r)
+Создаем необходимые файлы для сервиса spawn-fcgi:
 
-Далее работает триггер на перезагрузку, машину загружается с новым ядром.
+    wget https://raw.githubusercontent.com/Rolllz/teaching/SYSTEMD/spawn-fcgi.service -O /lib/systemd/system/spawn-fcgi.service
+    wget https://raw.githubusercontent.com/Rolllz/teaching/SYSTEMD/spawn-fcgi -O /etc/default/spawn-fcgi
 
-Создаем папку для тестового скрипта внутри dracut и скачиваем туда файлы:
-    
-    mkdir /usr/lib/dracut/modules.d/01test
-    wget https://gist.githubusercontent.com/lalbrekht/ac45d7a6c6856baea348e64fac43faf0/raw/69598efd5c603df310097b52019dc979e2cb342d/gistfile1.txt -O /usr/lib/dracut/modules.d/01test/test.sh
-    wget https://gist.githubusercontent.com/lalbrekht/e51b2580b47bb5a150bd1a002f16ae85/raw/80060b7b300e193c187bbcda4d8fdf0e1c066af9/gistfile1.txt -O /usr/lib/dracut/modules.d/01test/module-setup.sh
+Запускаем сервис и проверяем его статус:
 
-Еще раз генерируем образ:
+    systemctl start spawn-fcgi && systemctl status spawn-fcgi
 
-    mkinitrd -f -v /boot/initramfs-$(uname -r).img $(uname -r)
+Для Apache2 существует специальный скрипт, позволяющий одной командой создать дополнительный экземпляр сервиса без критического изменения конфигурационных файлов. Для запуска доп. сервисов необходимо только переназначить порты, что и представлено в цикле. Поэтому назначаем права доступа данному скрипту, запускаем его и создаем два дополнительных экземпляра сервиса Apache2:
 
-Проверяем наличие нового модуля в загрузчике:
-
-    lsinitrd -m /boot/initramfs-$(uname -r).img | grep test
-
-Удаляем из конфига тихую загрузку:
-    
-    sed -i "s/rhgb quiet//g" /boot/grub2/grub.cfg
-
-Далее еще один триггер на перезагрузку, и в GUI можно будет увидеть пингвинчика :)
+    chmod +x /usr/share//doc/apache2/examples/setup-instance
+    for i in {1,2}; do
+        /usr/share/doc/apache2/examples/setup-instance $i
+        wget https://raw.githubusercontent.com/Rolllz/teaching/SYSTEMD/$i-ports.conf -O /etc/apache2-$i/ports.conf
+        systemctl start apache2@$i && systemctl status apache2@$i
+    done
