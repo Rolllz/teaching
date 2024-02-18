@@ -1,0 +1,6 @@
+# Configuration file for my watchlog service
+# Place it ti /etc/default
+
+# File and word in that file we will be monit
+WORD="ALERT"
+LOG=/var/log/watchlog.log
