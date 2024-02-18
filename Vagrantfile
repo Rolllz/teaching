@@ -1,7 +1,7 @@
 vars = {
-    :box_name => "centos/7",
-    :box_version => "1804.2",
-    :name => "grub"
+    :box_name => "generic/debian12",
+    :box_version => "4.3.12",
+    :name => "systemd"
 }
 
 Vagrant.configure(2) do |config|
@@ -10,6 +10,8 @@ Vagrant.configure(2) do |config|
         config.vbguest.auto_update = false
     end
 
+    config.vm.synced_folder ".", "/vagrant", disabled: true
+
     config.vm.box_version = vars[:box_version]
     config.vm.define vars[:name] do |box|
 
@@ -17,15 +19,12 @@ Vagrant.configure(2) do |config|
         box.vm.host_name = vars[:name]
 
         box.vm.provider :virtualbox do |vb|
-            vb.gui = true
+            #vb.gui = true
             vb.customize ["modifyvm", :id, "--memory", 4 * 1024]
             vb.customize ["modifyvm", :id, "--cpus", "6"]
         end
 
         box.vm.provision "shell", path: "./script.sh"
-        box.vm.provision :reload
-        box.vm.provision "shell", path: "./script2.sh"
-        box.vm.provision :reload
-            
+        
     end
 end
