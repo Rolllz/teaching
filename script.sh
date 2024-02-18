@@ -1,9 +1,21 @@
 #!/bin/bash -x
 set -m
 
-vgrename VolGroup00 OtusRoot
-yum install wget -y
-wget https://gist.githubusercontent.com/lalbrekht/ef78c39c236ae223acfb3b5e1970001c/raw/3bdf1d1a374eff4a5696dcea226ae5c4ca4d6374/gistfile1.txt -O /etc/default/grub
-wget https://gist.githubusercontent.com/lalbrekht/1a9cae3cb64ce2dc7bd301e48090bd56/raw/aa1cf0b3fd794d454dfa7fc2770784ef29ae89ea/gistfile1.txt -O /boot/grub2/grub.cfg
-wget https://gist.githubusercontent.com/lalbrekht/cdf6d745d048009dbe619d9920901bf9/raw/f9ae66d2d2fc727791d5ea69d67cc5760c4c5fea/gistfile1.txt -O /etc/fstab
-mkinitrd -f -v /boot/initramfs-$(uname -r).img $(uname -r)
+apt install -y apache2 wget rsyslog spawn-fcgi php php-cgi php-cli
+wget https://raw.githubusercontent.com/Rolllz/teaching/SYSTEMD/watchlog.timer -O /lib/systemd/system/watchlog.timer
+wget https://raw.githubusercontent.com/Rolllz/teaching/SYSTEMD/watchlog.sh -O /opt/watchlog.sh
+chmod +x /opt/watchlog.sh
+wget https://raw.githubusercontent.com/Rolllz/teaching/SYSTEMD/watchlog.service -O /lib/systemd/system/watchlog.service
+wget https://raw.githubusercontent.com/Rolllz/teaching/SYSTEMD/watchlog -O /etc/default/watchlog
+systemctl start watchlog.timer
+cat /var/log/syslog | grep Master
+wget https://raw.githubusercontent.com/Rolllz/teaching/SYSTEMD/spawn-fcgi.service -O /lib/systemd/system/spawn-fcgi.service
+wget https://raw.githubusercontent.com/Rolllz/teaching/SYSTEMD/spawn-fcgi -O /etc/default/spawn-fcgi
+systemctl start spawn-fcgi && systemctl status spawn-fcgi
+chmod +x /usr/share//doc/apache2/examples/setup-instance
+/usr/share/doc/apache2/examples/setup-instance 1
+/usr/share/doc/apache2/examples/setup-instance 2
+wget https://raw.githubusercontent.com/Rolllz/teaching/SYSTEMD/apache2-1_ports.conf -O /etc/apache2-1/ports.conf
+wget https://raw.githubusercontent.com/Rolllz/teaching/SYSTEMD/apache2-2_ports.conf -O /etc/apache2-2/ports.conf
+systemctl start apache2@1 && systemctl status apache2@1
+systemctl start apache2@2 && systemctl status apache2@2
