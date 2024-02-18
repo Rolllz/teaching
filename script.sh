@@ -14,8 +14,7 @@ wget https://raw.githubusercontent.com/Rolllz/teaching/SYSTEMD/spawn-fcgi.servic
 wget https://raw.githubusercontent.com/Rolllz/teaching/SYSTEMD/spawn-fcgi -O /etc/default/spawn-fcgi
 systemctl start spawn-fcgi && systemctl status spawn-fcgi
 chmod +x /usr/share//doc/apache2/examples/setup-instance
-/usr/share/doc/apache2/examples/setup-instance 1
-/usr/share/doc/apache2/examples/setup-instance 2
+/usr/share/doc/apache2/examples/setup-instance {1,2}
 wget https://raw.githubusercontent.com/Rolllz/teaching/SYSTEMD/apache2-1_ports.conf -O /etc/apache2-1/ports.conf
 wget https://raw.githubusercontent.com/Rolllz/teaching/SYSTEMD/apache2-2_ports.conf -O /etc/apache2-2/ports.conf
 systemctl start apache2@1 && systemctl status apache2@1
