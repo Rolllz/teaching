@@ -4,6 +4,7 @@ set -m
 apt install -y apache2 wget rsyslog spawn-fcgi php php-cgi php-cli
 wget https://raw.githubusercontent.com/Rolllz/teaching/SYSTEMD/watchlog.timer -O /lib/systemd/system/watchlog.timer
 wget https://raw.githubusercontent.com/Rolllz/teaching/SYSTEMD/watchlog.sh -O /opt/watchlog.sh
+wget https://raw.githubusercontent.com/Rolllz/teaching/SYSTEMD/watchlog.sh -O /var/log/watchlog.log
 chmod +x /opt/watchlog.sh
 wget https://raw.githubusercontent.com/Rolllz/teaching/SYSTEMD/watchlog.service -O /lib/systemd/system/watchlog.service
 wget https://raw.githubusercontent.com/Rolllz/teaching/SYSTEMD/watchlog -O /etc/default/watchlog
