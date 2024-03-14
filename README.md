@@ -73,13 +73,14 @@
   Определяем список кодов HTTP-ответа и вычисляем частоту встречаемости каждого из кодов:
   
     printf "Count\tRequest\n" > ~/list_requests.txt
-    printf '%s\n' "$LOGDATA" | awk '{print $9}' | sort | uniq -c | sed "s/^ \{1,\}//g" >> ~/list_requests.txt
+    printf '%s\n' "$LOGDATA" | awk '{print $9}' | sort | uniq -c | sort -n | sed "s/^ \{1,\}//g; s/ /\t/g" >> ~/list_requests.txt
 
   Указываем почтовый адрес получателя электронного письма, формируем заголовок и тело письма и отправляем:
 
     recipient="unknownmail@gmail.com"
     subject="Apache2 statistics"
     cat ~/time.txt ~/list_IP.txt ~/list_URL.txt ~/list_requests.txt | mailx -s "$subject" "$recipient"
+    rm ~/time.txt ~/list_IP.txt ~/list_URL.txt ~/list_requests.txt
 
   Ну и завершаем часть с предотвращением одновременного выполнения скрипта:
 
