@@ -49,5 +49,6 @@ printf '%s\n' "$LOGDATA" | awk '{print $9}' | sort | uniq -c | sort -n | sed "s/
 recipient="unknownmail@gmail.com"
 subject="Apache2 statistics"
 cat ~/time.txt ~/list_IP.txt ~/list_URL.txt ~/list_requests.txt | mailx -s "$subject" "$recipient"
+rm ~/time.txt ~/list_IP.txt ~/list_URL.txt ~/list_requests.txt
 
 ) 9>/var/lock/mylockfile
