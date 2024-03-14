@@ -1,5 +1,5 @@
 #!/bin/bash
-#set -euxo pipefail
+set -euo pipefail
 
 (
 flock -n 9 || exit 1
@@ -43,7 +43,7 @@ list_url=$(list ${urls[@]})
 printf "Count\t$tip\n" > ~/list_$tip.txt
 printf "%s\n" "${list_url}" >> ~/list_$tip.txt
 printf "Count\tRequest\n" > ~/list_requests.txt
-printf '%s\n' "$LOGDATA" | awk '{print $9}' | sort | uniq -c | sed "s/^ \{1,\}//g" >> ~/list_requests.txt
+printf '%s\n' "$LOGDATA" | awk '{print $9}' | sort | uniq -c | sort -n | sed "s/^ \{1,\}//g; s/ /\t/g" >> ~/list_requests.txt
 
 
 recipient="unknownmail@gmail.com"
