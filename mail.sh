@@ -1,5 +1,5 @@
 #!/bin/bash
-set -euxo pipefail
+#set -euxo pipefail
 
 (
 flock -n 9 || exit 1
