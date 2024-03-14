@@ -4,7 +4,7 @@ set -euxo pipefail
 (
 flock -n 9 || exit 1
 
-LOGFILE=/var/log/apache2/access.log
+LOGFILE=./access.log
 LOGDATA=$(cat $LOGFILE)
 
 CURTIME=$(date)
