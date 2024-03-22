@@ -34,3 +34,10 @@
     - name: Apply new SELinux file context to filesystem
       command: restorecon -irv /etc/named
 ```
+
+  В случае, если необходима разовая проверка, то достаточно только добавить второй таск, только с измененной командой:
+
+```yaml
+    -name: Change SELinux file context
+      command: chcon -R -t named_zone_t /etc/named
+```
