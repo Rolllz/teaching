@@ -7,7 +7,7 @@
 Описание домашнего задания
 
     1.  Установите Docker на хост машину
-    ```https://docs.docker.com/engine/install/ubuntu/```
+    https://docs.docker.com/engine/install/ubuntu/
     
     2.  Установите Docker Compose - как плагин, или как отдельное приложение
     3.  Создайте свой кастомный образ nginx на базе alpine. После запуска nginx должен отдавать кастомную страницу (достаточно изменить дефолтную страницу nginx)
