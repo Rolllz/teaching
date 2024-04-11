@@ -4,49 +4,40 @@ PAM
 Цель домашнего задания
 Научиться создавать пользователей и добавлять им ограничения
 
-Описание домашнего задания
-  Подготовить стенд на Vagrant как минимум с одним сервером. На этом сервере, используя Ansible необходимо развернуть nginx со следующими условиями:
-- необходимо использовать модуль yum/apt
-- конфигурационный файлы должны быть взяты из шаблона jinja2 с
-переменными
-- после установки nginx должен быть в режиме enabled в systemd
-- должен быть использован notify для старта nginx после установки
-- сайт должен слушать на нестандартном порту - 8080, для этого использовать переменные в Ansible
-* Сделать все это с использованием Ansible роли
+Описание домашнего задания:
+
+    ```Запретить всем пользователям, кроме группы admin логин в выходные (суббота и воскресенье), без учета праздников
+    Дать конкретному пользователю права работать с докером и возможность рестартить докер сервис*```
 
 В данном ДЗ был использован Debian 12.
 После установки и запуска ОС выполняются следующие команды:
 
-#Находим в ssh-конфиге строчку с авторизованными ключами и раскомментируем
+Разрешаем доступ по ssh с помощью пароля:
 
-sudo sed -i 's/\#AuthorizedKeysFile/AuthorizedKeysFile/g' /etc/ssh/sshd_config
+    sed -i 's/#PasswordAuthentication.*$/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+    systemctl restart sshd.service
 
-#Находим в ssh-конфиге строчку с подключением по публичному ключу и раскомментируем
+Устанавливаем Docker:
 
-sudo sed -i 's/\#PubkeyAuthentication yes/PubkeyAuthentication yes/g' /etc/ssh/sshd_config
+    apt update && apt install ca-certificates curl -y
+    install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+    chmod a+r /etc/apt/keyrings/docker.asc
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+    apt update && apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
-#Перезапускаем службу для возможности подключения без пароля
+Создаем пользователей для 
 
-sudo systemctl restart sshd
-
-Описанные выше команды выполняются в Vagrantfile.
-
-Далее в хостовой ОС выполняем следующие действия:
-
-#Удаляем все записи с нашими параметрами, чтобы можно было подключиться без пароля
-
-ssh-keygen -f ~/.ssh/known_hosts -R "[127.0.0.1]:2222"
-
-#Копируем ключ на гостевую машину
-
-ssh-copy-id -p 2222 vagrant@127.0.0.1
-
-Сначала отвечаем yes, затем вводим пароль vagrant
-
-После этого запускаем наш playbook:
-
-ansible-playbook nginx.yml
-
-После установки и настройки веб-сервера запускаем проверочную команду
-
-curl 192.168.56.150:8080
+for i in {otus,otusadm}; do
+    useradd -s /bin/bash $i
+    mkdir /home/$i
+    cp -rT /etc/skel /home/$i
+    chown -R $i:$i /home/$i
+done
+groupadd -f admin
+yes "Otus2024!" | passwd otusadm && yes "Otus2024!" | passwd otus && yes "vagrant" | passwd root
+for i in {vagrant,root,otusadm}; do usermod -aG admin $i; done
+cp -f /vagrant/login.sh /usr/local/bin/
+echo "auth required pam_exec.so debug /usr/local/bin/login.sh" >> /etc/pam.d/sshd
+echo "otus ALL=NOPASSWD: /usr/bin/systemctl restart docker" > /etc/sudoers.d/otus
+usermod -aG docker otus
