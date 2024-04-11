@@ -6,9 +6,8 @@ PAM
 
 Описание домашнего задания:
 
-  ```1. Запретить всем пользователям, кроме группы admin логин в выходные (суббота и воскресенье), без учета праздников```
-  
-  ```2*. Дать конкретному пользователю права работать с докером и возможность рестартить докер сервис```
+  ```1) Запретить всем пользователям, кроме группы admin логин в выходные (суббота и воскресенье), без учета праздников```
+  ```2) Дать конкретному пользователю права работать с докером и возможность рестартить докер сервис*```
 
 В данном ДЗ был использован Debian 12.
 После установки и запуска ОС выполняются следующие команды:
@@ -27,7 +26,7 @@ PAM
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
     apt update && apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
-Создаем пользователей для заданий 1) и 2*):
+Создаем пользователей для заданий 1) и 2):
 
     for i in {otus,otusadm}; do
         useradd -s /bin/bash $i
