@@ -95,7 +95,6 @@ Vagrant.configure("2") do |config|
       end
 
       box.vm.provision "shell", inline: <<-SHELL
-        yes "vagrant" | passwd root
         mkdir -p ~root/.ssh
         cp ~vagrant/.ssh/auth* ~root/.ssh
         #echo "ip route del default" >> /etc/dhcp/dhclient-exit-hooks.d/rfc3442-classless-routes
