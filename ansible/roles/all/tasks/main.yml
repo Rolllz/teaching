@@ -1,0 +1,44 @@
+- name: Обновление репозиториев
+  ansible.builtin.apt:
+    name: "{{ packages }}"
+    state: present
+    update_cache: true
+  tags:
+    - apt update
+  vars:
+    packages:
+      - iptables
+      - network-manager
+      - traceroute
+  become: true
+- name: Принудительное управление интерфейсами через Network Manager
+  ansible.builtin.replace:
+    path: /etc/NetworkManager/NetworkManager.conf
+    after: '[ifupdown]'
+    regexp: 'managed=false'
+    replace: 'managed=true'
+  tags:
+    - Network Manager config
+- name: Перезапуск Network Manager
+  ansible.builtin.service:
+    name: NetworkManager
+    state: restarted
+    enabled: true
+  tags:
+    - Network Manager restart
+- name: Удалить маршрут по умолчанию
+  community.general.nmcli:
+    conn_name: "eth0"
+    gw4_ignore_auto: true
+    state: present
+  when: (ansible_hostname != "inetRouter")
+  tags:
+    - delete dafeult gateway
+- name: Включить пропуск транзитных пакетов
+  ansible.posix.sysctl:
+    name: net.ipv4.conf.all.forwarding
+    value: '1'
+    state: present
+  when: ('routers' in group_names)
+  tags:
+    - ipv4 forwarding enable

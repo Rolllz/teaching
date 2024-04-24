@@ -1,0 +1,42 @@
+- name: Настраиваем шлюз по умолчанию для eth1 ...
+  community.general.nmcli:
+    conn_name: "eth1"
+    gw4: "192.168.255.1"
+    state: present
+  tags:
+    - gw4 on eth1 on centralRouter
+- name: Настраиваем шлюз по умолчанию для eth2 ...
+  community.general.nmcli:
+    conn_name: "eth2"
+    gw4: "192.168.255.1"
+    state: present
+  tags:
+    - gw4 on eth2 on centralRouter
+- name: Настраиваем шлюз по умолчанию для eth3 ...
+  community.general.nmcli:
+    conn_name: "eth3"
+    gw4: "192.168.255.1"
+    state: present
+  tags:
+    - gw4 on eth3 on centralRouter
+- name: Настраиваем шлюз по умолчанию для eth4 ...
+  community.general.nmcli:
+    conn_name: "eth4"
+    gw4: "192.168.255.1"
+    state: present
+  tags:
+    - gw4 on eth4 on centralRouter
+- name: Настраиваем шлюз по умолчанию для eth5 ...
+  community.general.nmcli:
+    conn_name: "eth5"
+    gw4: "192.168.255.1"
+    state: present
+  tags:
+    - gw4 on eth5 on centralRouter
+- name: Настраиваем шлюз по умолчанию для eth6 ...
+  community.general.nmcli:
+    conn_name: "eth6"
+    gw4: "192.168.255.1"
+    state: present
+  tags:
+    - gw4 on eth6 on centralRouter

@@ -1,60 +1,118 @@
+# -*- mode: ruby -*-"}
+# vim: set ft=ruby :
+
 MACHINES = {
-	:"kernel-update" => {
-		:box_name => "generic/debian12",
-		:box_version => "4.3.12",
-		:cpus => 6,
-		:memory => 8192,
-	}
+:inetRouter => {
+  :box_name => "generic/debian12",
+  #:public => {:ip => '10.10.10.1', :adapter => 1},
+  :net => [
+    ['192.168.255.1', 2, "255.255.255.252", "router-net"],
+    ['192.168.56.10', 8, "255.255.255.0"]
+  ]
+},
+:office1Router => {
+  :box_name => "generic/debian12",
+  :net => [
+    ['192.168.255.10', 2, "255.255.255.252", "office1-net"],
+    ['192.168.2.1', 3, "255.255.255.192", "dev1-net"],
+    ['192.168.2.65', 4, "255.255.255.192", "test1-net"],
+    ['192.168.2.129', 5, "255.255.255.192", "mgt1-net"],
+    ['192.168.2.193', 6, "255.255.255.192", "hw1-net"],
+    ['192.168.56.11', 8, "255.255.255.0"]
+  ]
+},
+:office1Server => {
+  :box_name => "generic/debian12",
+  :net => [
+    ['192.168.2.130', 2, "255.255.255.192", "manage-net"],
+    ['192.168.56.12', 8, "255.255.255.0"]
+  ]
+},
+:office2Router => {
+  :box_name => "generic/debian12",
+  :net => [
+    ['192.168.255.6', 2, "255.255.255.252", "office2-net"],
+    ['192.168.1.1', 3, "255.255.255.128", "dev2-net"],
+    ['192.168.1.129', 4, "255.255.255.192", "test2-net"],
+    ['192.168.1.193', 5, "255.255.255.192", "hw2-net"],
+    ['192.168.56.13', 8, "255.255.255.0"]
+  ]
+},
+:office2Server => {
+  :box_name => "generic/debian12",
+  :net => [
+    ['192.168.1.2', 2, "255.255.255.128", "dev2-net"],
+    ['192.168.56.14', 8, "255.255.255.0"]
+  ]
+},
+:centralRouter => {
+  :box_name => "generic/debian12",
+  :net => [
+    ['192.168.255.2', 2, "255.255.255.252", "router-net"],
+    ['192.168.255.9', 3, "255.255.255.252", "office1-net"],
+    ['192.168.255.5', 4, "255.255.255.252", "office2-net"],
+    ['192.168.0.1', 5, "255.255.255.240", "dir-net"],
+    ['192.168.0.33', 6, "255.255.255.240", "hw-net"],
+    ['192.168.0.65', 7, "255.255.255.192", "wifi-net"],
+    ['192.168.56.15', 8, "255.255.255.0"]
+  ]
+},
+:centralServer => {
+  :box_name => "generic/debian12",
+  :net => [
+    ['192.168.0.2', 2, "255.255.255.240", "dir-net"],
+    ['192.168.56.16', 8, "255.255.255.0"]
+  ]
+},
 }
 
+#playbooks = ["main_playbook.yml", "inetRouter.yml", "office1Router.yml", "office2Router.yml", "centralRouter", "servers.yml"]
+
 Vagrant.configure("2") do |config|
-	MACHINES.each do |boxname, boxconfig|
-		config.vm.synced_folder ".", "/vagrant"#, disabled: true
-		#config.vm.synced_folder "/mnt/flash/sync", "/mnt/vagrant", disabled: false
-		config.vm.define boxname do |box|
-			box.vm.box = boxconfig[:box_name]
-			box.vm.box_version = boxconfig[:box_version]#"> 4.3.10"
-			box.vm.host_name = boxname.to_s
-			box.vm.provider "virtualbox" do |v|
-				v.memory = boxconfig[:memory]
-				v.cpus = boxconfig[:cpus]
-			end
-		end
-		config.vm.provision "shell", inline: <<-SHELL
-			sudo apt-get update
-			sudo apt-get install -y gcc cmake ncurses-dev libssl-dev bc flex libelf-dev bison git fakeroot build-essential xz-utils lsb-release software-properties-common apt-transport-https ca-certificates curl dwarves dkms
-			#Если раздел /boot слишком маленький, можно удалить предыдущие образы ядра, иначе для нового не хватит свободного места
-			#sudo rm /boot/initrd*
-			#sudo rm /boot/vmlinuz*
-			wget https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.7.tar.xz
-			wget --no-check-certificate 'https://docs.google.com/uc?export=download&id=1MNt-MkbD-am9jkY8WXoT7JbL0XXxHAWc' -O ./VboxGuestAdditions.iso
-			echo "Распаковка архива..."
-			tar xf linux-6.7.tar.xz
-			cd linux-6.7
-			cp -v /boot/config-$(uname -r) .config
-			echo "Сборка ядра..."
-			yes "" | make oldconfig
-			make -j$(($(nproc)+1)) -s
-			sudo make modules_install -s
-			echo "установка, создание образа ядра и обновление GRUB..."
-			sudo make install
-			#sudo update-initramfs -c -k 6.7.0
-			#sudo update-grub
-			#sudo grep gnulinux /boot/grub/grub.cfg | grep "6.7.0' --class" | awk -F"'" '{print $4}' > ./version_of_kernel.txt
-			#sudo export VE=$(cat ./version_of_kernel.txt)
-			#sudo echo "DEFAULT_GRUB=$VE" >> /etc/default/grub
-			echo "Удаление архива и директории с исходниками..."
-			sudo rm -r ./linux-6.7
-			rm linux-6.7.tar.xz
-			echo "Перезагрузка..."
-			sudo shutdown -r now
-			sudo mkdir /mnt/iso
-			sudo mount -o loop ./VboxGuestAdditions.iso /mnt/iso
-			cd /mnt/iso
-			sudo ./autorun.sh
-			sudo mount -t vboxfs mnt_vagrant /vagrant
-			sudo apt autoremove -y
-			uname -r
-		SHELL
-	end
+
+  if Vagrant.has_plugin?("vagrant-vbguest") then
+    config.vbguest.auto_update = false
+  end
+
+  MACHINES.each do |boxname, boxconfig|
+
+    config.vm.define boxname do |box|
+
+      box.vm.box = boxconfig[:box_name]
+      box.vm.host_name = boxname.to_s
+
+      boxconfig[:net].each do |ipconf|
+        box.vm.network("private_network", ip: ipconf[0], adapter: ipconf[1], netmask: ipconf[2], virtualbox__intnet: ipconf[3])
+      end
+
+      if boxconfig.key?(:public)
+        box.vm.network "public_network", boxconfig[:public]
+      end
+
+      box.vm.provider "virtualbox" do |v|
+        v.memory = 768
+        v.cpus = 1
+      end
+
+      box.vm.provision "shell", inline: <<-SHELL
+        yes "vagrant" | passwd root
+        mkdir -p ~root/.ssh
+        cp ~vagrant/.ssh/auth* ~root/.ssh
+        #echo "ip route del default" >> /etc/dhcp/dhclient-exit-hooks.d/rfc3442-classless-routes
+        #[[ "$(hostname)" =~ Router ]] && sysctl net.ipv4.conf.all.forwarding=1
+      SHELL
+
+      if boxname.to_s == "centralServer"
+        box.vm.provision "ansible" do |ansible|
+          ansible.inventory_path = "ansible/hosts"
+          ansible.version = "latest"
+          #ansible.remote_user = "root"
+          ansible.host_key_checking = false
+          ansible.playbook = "ansible/all_roles.yml"
+          ansible.verbose = "v"
+          ansible.limit = "all"
+        end
+      end
+    end
+  end
 end
