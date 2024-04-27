@@ -11,7 +11,6 @@
       vars:
         packages:
           - iptables
-          - network-manager
           - traceroute
     - name: Включить пропуск транзитных пакетов
       ansible.posix.sysctl:
