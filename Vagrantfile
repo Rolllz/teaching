@@ -4,7 +4,6 @@
 MACHINES = {
 :inetRouter => {
   :box_name => "generic/debian12",
-  #:public => {:ip => '10.10.10.1', :adapter => 1},
   :net => [
     ['192.168.255.1', 2, "255.255.255.252", "router-net"],
     ['192.168.56.10', 8, "255.255.255.0"]
@@ -24,7 +23,7 @@ MACHINES = {
 :office1Server => {
   :box_name => "generic/debian12",
   :net => [
-    ['192.168.2.130', 2, "255.255.255.192", "manage-net"],
+    ['192.168.2.130', 2, "255.255.255.192", "mgt1-net"],
     ['192.168.56.12', 8, "255.255.255.0"]
   ]
 },
@@ -66,8 +65,6 @@ MACHINES = {
 },
 }
 
-#playbooks = ["main_playbook.yml", "inetRouter.yml", "office1Router.yml", "office2Router.yml", "centralRouter", "servers.yml"]
-
 Vagrant.configure("2") do |config|
 
   if Vagrant.has_plugin?("vagrant-vbguest") then
@@ -97,18 +94,15 @@ Vagrant.configure("2") do |config|
       box.vm.provision "shell", inline: <<-SHELL
         mkdir -p ~root/.ssh
         cp ~vagrant/.ssh/auth* ~root/.ssh
-        #echo "ip route del default" >> /etc/dhcp/dhclient-exit-hooks.d/rfc3442-classless-routes
-        #[[ "$(hostname)" =~ Router ]] && sysctl net.ipv4.conf.all.forwarding=1
       SHELL
 
       if boxname.to_s == "centralServer"
         box.vm.provision "ansible" do |ansible|
           ansible.inventory_path = "ansible/hosts"
           ansible.version = "latest"
-          #ansible.remote_user = "root"
           ansible.host_key_checking = false
-          ansible.playbook = "ansible/all_roles.yml"
-          ansible.verbose = "v"
+          ansible.playbook = "ansible/main.yml"
+          #ansible.verbose = "v"
           ansible.limit = "all"
         end
       end
