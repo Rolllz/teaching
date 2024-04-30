@@ -1,23 +1,7 @@
-- name: Обновление пакетиков ...
-  ansible.builtin.apt:
-    state: present
-    update_cache: true
-    upgrade: full
-  tags:
-    - full-upgrade packages
-- name: Перезапуск машин
-  ansible.builtin.reboot:
-    reboot_timeout: 600
-  tags:
-    - reboot
-- name: Удаление лишних пакетиков ...
-  ansible.builtin.apt:
-    autoremove: true
 - name: Установка пакетиков ...
   ansible.builtin.apt:
     name:
       - rsyslog
-      - apt-transport-https
     state: present
     update_cache: true
   tags:
