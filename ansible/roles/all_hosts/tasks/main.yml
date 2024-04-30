@@ -1,0 +1,40 @@
+- name: Обновление пакетиков ...
+  ansible.builtin.apt:
+    state: present
+    update_cache: true
+    upgrade: full
+  tags:
+    - full-upgrade packages
+- name: Перезапуск машин
+  ansible.builtin.reboot:
+    reboot_timeout: 600
+  tags:
+    - reboot
+- name: Удаление лишних пакетиков ...
+  ansible.builtin.apt:
+    autoremove: true
+- name: Установка пакетиков ...
+  ansible.builtin.apt:
+    name:
+      - rsyslog
+      - apt-transport-https
+    state: present
+    update_cache: true
+  tags:
+    - install packages
+- name: Замена конфига rsyslog ...
+  ansible.builtin.copy:
+    src: files/rsyslog.conf
+    dest: /etc/rsyslog.conf
+    mode: '0644'
+    force: true
+  when: (ansible_hostname == "log")
+  tags:
+    - replace rsyslog config
+- name: Запуск rsyslog ...
+  ansible.builtin.systemd_service:
+    name: rsyslog
+    enabled: true
+    state: restarted
+  tags: restart rsyslog
+  when: (ansible_hostname == "log")

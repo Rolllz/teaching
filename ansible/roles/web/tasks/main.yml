@@ -1,0 +1,50 @@
+- name: Установка nginx ...
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+    update_cache: true
+  tags:
+    - install nginx
+- name: Замена конфига nginx ...
+  ansible.builtin.copy:
+    src: files/nginx.conf
+    dest: /etc/nginx/nginx.conf
+    mode: '0644'
+    force: true
+  tags:
+    - replace nginx config
+- name: Запуск nginx ...
+  ansible.builtin.systemd_service:
+    name: nginx
+    enabled: true
+    state: restarted
+  tags:
+    - restart nginx
+- name: Добавление ключа elasticsearch ...
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+      wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo gpg --dearmor -o /usr/share/keyrings/elasticsearch-keyring.gpg
+    executable: /bin/bash
+  args:
+    creates: /usr/share/keyrings/elasticsearch-keyring.gpg
+  tags:
+    - add elasticsearch keyring
+- name: Добавление репозитория elasticsearch ...
+  ansible.builtin.copy:
+    src: files/elastic-8.x.list
+    dest: /etc/apt/sources.list.d/elastic-8.x.list
+    force: true
+    owner: root
+    group: root
+    mode: '0755'
+  tags:
+    - add elasticsearch repository
+- name: Установка filebeat ...
+  ansible.builtin.apt:
+    name:
+      - filebeat
+    state: present
+    update_cache: true
+  tags:
+    - install filebeat

@@ -1,0 +1,12 @@
+- name: Работа со всеми машинами ...
+  hosts: all
+  roles:
+    - all_hosts
+- name: Работа с ELK ...
+  hosts: elk
+  roles:
+    - elk
+- name: Работа с Nginx ...
+  hosts: web
+  roles:
+    - web
