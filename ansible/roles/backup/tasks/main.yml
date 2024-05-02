@@ -1,0 +1,48 @@
+- name: Удаление старых партиций с диска и создание нового раздела на весь диск ...
+  ansible.builtin.script: scripts/backup.sh
+  register: part
+  changed_when: part.rc != 0
+- name: Создание группы borg ...
+  ansible.builtin.group:
+    name: borg
+    state: present
+    force: true
+- name: Создание пользователя borg ...
+  ansible.builtin.user:
+    name: borg
+    group: borg
+    shell: /bin/bash
+    state: present
+    create_home: true
+    force: true
+    home: /home/borg
+- name: Создание директории ssh ...
+  ansible.builtin.file:
+    path: /home/borg/.ssh
+    state: directory
+    mode: '0700'
+    owner: borg
+    group: borg
+- name: Создание директории для бэкапа ...
+  ansible.builtin.file:
+    path: /var/backup
+    state: directory
+    mode: '0755'
+    owner: borg
+    group: borg
+- name: Удаление содержимого директории /var/backup ...
+  ansible.builtin.shell:
+    cmd:
+      mount /dev/sdb1 /var/backup && chown -R borg:borg /var/backup && rm -rf /var/backup/* && systemctl daemon-reload
+    executable: /bin/bash
+  register: mount
+  changed_when: mount.rc != 0
+  tags:
+    - mount and chown /var/backup
+- name: Копирование ключей ssh ...
+  ansible.builtin.copy:
+    src: "authorized_keys"
+    dest: "/home/borg/.ssh/authorized_keys"
+    mode: '0600'
+    owner: borg
+    group: borg

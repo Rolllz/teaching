@@ -1,0 +1,12 @@
+- name: Работа с сервером ...
+  hosts: backup
+  roles:
+    - backup
+  tags:
+    - work with server
+- name: Работа с клиентом ...
+  hosts: client
+  roles:
+    - client
+  tags:
+    - work with client

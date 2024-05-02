@@ -1,0 +1,41 @@
+- name: Копирование публичного ключа ssh ...
+  ansible.builtin.copy:
+    src: "{{item}}"
+    dest: "/home/vagrant/.ssh/{{item}}"
+    mode: '0600'
+    owner: vagrant
+    group: vagrant
+    force: true
+  loop:
+    - id_rsa
+    - id_rsa.pub
+- name: Копирование файлов службы бэкапа ...
+  become: true
+  ansible.builtin.copy:
+    src: "{{item}}"
+    dest: "/etc/systemd/system/{{item}}"
+    mode: '0644'
+    owner: root
+    group: root
+    force: true
+  loop:
+    - borg-backup.service
+    - borg-backup.timer
+  tags:
+    - copy backup files
+- name: Инициализация репозитория ...
+  ansible.builtin.script:
+    cmd: scripts/client.sh
+  ignore_errors: true
+  tags:
+    - init repo
+  register: repo_output
+  changed_when: repo_output.rc != 0
+- name: Запуск сервиса ...
+  become: true
+  ansible.builtin.systemd_service:
+    name: borg-backup.timer
+    enabled: true
+    state: restarted
+  tags:
+    - start borg
