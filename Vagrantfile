@@ -1,68 +1,36 @@
-# -*- mode: ruby -*-"}
-# vim: set ft=ruby :
+os_name = "generic/debian12"
 
 MACHINES = {
-:inetRouter => {
-  :box_name => "generic/debian12",
-  :net => [
-    ['192.168.255.1', 2, "255.255.255.252", "router-net"],
-    ['192.168.56.10', 8, "255.255.255.0"]
-  ]
-},
-:office1Router => {
-  :box_name => "generic/debian12",
-  :net => [
-    ['192.168.255.10', 2, "255.255.255.252", "office1-net"],
-    ['192.168.2.1', 3, "255.255.255.192", "dev1-net"],
-    ['192.168.2.65', 4, "255.255.255.192", "test1-net"],
-    ['192.168.2.129', 5, "255.255.255.192", "mgt1-net"],
-    ['192.168.2.193', 6, "255.255.255.192", "hw1-net"],
-    ['192.168.56.11', 8, "255.255.255.0"]
-  ]
-},
-:office1Server => {
-  :box_name => "generic/debian12",
-  :net => [
-    ['192.168.2.130', 2, "255.255.255.192", "mgt1-net"],
-    ['192.168.56.12', 8, "255.255.255.0"]
-  ]
-},
-:office2Router => {
-  :box_name => "generic/debian12",
-  :net => [
-    ['192.168.255.6', 2, "255.255.255.252", "office2-net"],
-    ['192.168.1.1', 3, "255.255.255.128", "dev2-net"],
-    ['192.168.1.129', 4, "255.255.255.192", "test2-net"],
-    ['192.168.1.193', 5, "255.255.255.192", "hw2-net"],
-    ['192.168.56.13', 8, "255.255.255.0"]
-  ]
-},
-:office2Server => {
-  :box_name => "generic/debian12",
-  :net => [
-    ['192.168.1.2', 2, "255.255.255.128", "dev2-net"],
-    ['192.168.56.14', 8, "255.255.255.0"]
-  ]
-},
-:centralRouter => {
-  :box_name => "generic/debian12",
-  :net => [
-    ['192.168.255.2', 2, "255.255.255.252", "router-net"],
-    ['192.168.255.9', 3, "255.255.255.252", "office1-net"],
-    ['192.168.255.5', 4, "255.255.255.252", "office2-net"],
-    ['192.168.0.1', 5, "255.255.255.240", "dir-net"],
-    ['192.168.0.33', 6, "255.255.255.240", "hw-net"],
-    ['192.168.0.65', 7, "255.255.255.192", "wifi-net"],
-    ['192.168.56.15', 8, "255.255.255.0"]
-  ]
-},
-:centralServer => {
-  :box_name => "generic/debian12",
-  :net => [
-    ['192.168.0.2', 2, "255.255.255.240", "dir-net"],
-    ['192.168.56.16', 8, "255.255.255.0"]
-  ]
-},
+  :router1 => {
+        :box_name => os_name,
+        :vm_name => "router1",
+        :net => [
+                   ['10.0.10.1', 2, "255.255.255.252", "r1-r2"],
+                   ['10.0.12.1', 3, "255.255.255.252", "r1-r3"],
+                   ['192.168.10.1', 4, "255.255.255.0", "net1"],
+                   ['192.168.56.10', 5],
+                ]
+  },
+  :router2 => {
+        :box_name => os_name,
+        :vm_name => "router2",
+        :net => [
+                   ['10.0.10.2', 2, "255.255.255.252", "r1-r2"],
+                   ['10.0.11.2', 3, "255.255.255.252", "r2-r3"],
+                   ['192.168.20.1', 4, "255.255.255.0", "net2"],
+                   ['192.168.56.11', 5],
+                ]
+  },
+  :router3 => {
+        :box_name => os_name,
+        :vm_name => "router3",
+        :net => [
+                   ['10.0.11.1', 2, "255.255.255.252", "r2-r3"],
+                   ['10.0.12.2', 3, "255.255.255.252", "r1-r3"],
+                   ['192.168.30.1', 4, "255.255.255.0", "net3"],
+                   ['192.168.56.12', 5],
+                ]
+  }
 }
 
 Vagrant.configure("2") do |config|
@@ -76,19 +44,15 @@ Vagrant.configure("2") do |config|
     config.vm.define boxname do |box|
 
       box.vm.box = boxconfig[:box_name]
-      box.vm.host_name = boxname.to_s
+      box.vm.host_name = boxconfig[:vm_name]
+
+      box.vm.provider "virtualbox" do |v|
+        v.memory = 1024
+        v.cpus = 1
+      end
 
       boxconfig[:net].each do |ipconf|
         box.vm.network("private_network", ip: ipconf[0], adapter: ipconf[1], netmask: ipconf[2], virtualbox__intnet: ipconf[3])
-      end
-
-      if boxconfig.key?(:public)
-        box.vm.network "public_network", boxconfig[:public]
-      end
-
-      box.vm.provider "virtualbox" do |v|
-        v.memory = 768
-        v.cpus = 1
       end
 
       box.vm.provision "shell", inline: <<-SHELL
@@ -96,16 +60,18 @@ Vagrant.configure("2") do |config|
         cp ~vagrant/.ssh/auth* ~root/.ssh
       SHELL
 
-      if boxname.to_s == "centralServer"
-        box.vm.provision "ansible" do |ansible|
-          ansible.inventory_path = "ansible/hosts"
-          ansible.version = "latest"
-          ansible.host_key_checking = false
-          ansible.playbook = "ansible/main.yml"
-          #ansible.verbose = "v"
-          ansible.limit = "all"
-        end
+      if boxconfig[:vm_name] == "router3"
+       box.vm.provision "ansible" do |ansible|
+        ansible.inventory_path = "ansible/hosts"
+        ansible.compatibility_mode = "2.0"
+        ansible.version = "latest"
+        ansible.host_key_checking = false
+        ansible.playbook = "ansible/main.yml"
+        #ansible.verbose = "v"
+        ansible.limit = "all"
+       end
       end
+
     end
   end
 end
