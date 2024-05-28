@@ -1,0 +1,70 @@
+- name: OSPF
+  hosts: all
+  vars_files:
+    - defaults/main.yml
+  tasks:
+    - name: Add FRR keyring
+      ansible.builtin.apt_key:
+        url: https://deb.frrouting.org/frr/keys.asc
+        state: present
+      tags:
+        - add gpg
+    - name: Add FRR repository
+      ansible.builtin.apt_repository:
+        repo: 'deb https://deb.frrouting.org/frr {{ ansible_distribution_release }} frr-stable'
+        state: present
+      tags:
+        - add repo
+    - name: Install base tools
+      ansible.builtin.apt:
+        name:
+          - nano
+          - traceroute
+          - tcpdump
+          - net-tools
+          - frr
+          - frr-pythontools
+        state: present
+        update_cache: true
+      tags:
+        - install tools
+    - name: Enable IPv4 forwarding
+      ansible.posix.sysctl:
+        name: net.ipv4.conf.all.forwarding
+        value: '1'
+        state: present
+      tags:
+        - enable forwarding
+    - name: Set up asynchronous routing
+      ansible.posix.sysctl:
+        name: net.ipv4.conf.all.rp_filter
+        value: '0'
+        state: present
+      tags:
+        - turn off async
+    - name: Copy conf files FRR
+      ansible.builtin.template:
+        src: frr.conf.j2
+        dest: /etc/frr/frr.conf
+        owner: frr
+        group: frr
+        mode: "0640"
+      tags:
+        - copy conf
+    - name: Copy daemons files FRR
+      ansible.builtin.template:
+        src: "daemons"
+        dest: /etc/frr/daemons
+        owner: frr
+        group: frr
+        mode: "0640"
+      tags:
+        - copy daemons
+    - name: Start FRR service
+      ansible.builtin.systemd_service:
+        name: frr
+        daemon_reload: true
+        enabled: true
+        state: restarted
+      tags:
+        - restart frr
