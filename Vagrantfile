@@ -1,12 +1,21 @@
 # -*- mode: ruby -*-"}
 # vim: set ft=ruby :
 
+name_of_box = "generic/debian12"
+
 MACHINES = {
 :inetRouter => {
   :box_name => "generic/debian12",
   :net => [
-    ['192.168.255.1', 2, "255.255.255.252", "router-net"],
+    ['192.168.255.1', 2, "255.255.255.252", "router1-net"],
     ['192.168.56.10', 8, "255.255.255.0"]
+  ]
+},
+:inetRouter2 => {
+  :box_name => "generic/debian12",
+  :net => [
+    ['192.168.0.66', 2, "255.255.255.192", "wifi-net"],
+    ['192.168.56.17', 8, "255.255.255.0"]
   ]
 },
 :office1Router => {
@@ -47,7 +56,7 @@ MACHINES = {
 :centralRouter => {
   :box_name => "generic/debian12",
   :net => [
-    ['192.168.255.2', 2, "255.255.255.252", "router-net"],
+    ['192.168.255.2', 2, "255.255.255.252", "router1-net"],
     ['192.168.255.9', 3, "255.255.255.252", "office1-net"],
     ['192.168.255.5', 4, "255.255.255.252", "office2-net"],
     ['192.168.0.1', 5, "255.255.255.240", "dir-net"],
@@ -62,7 +71,7 @@ MACHINES = {
     ['192.168.0.2', 2, "255.255.255.240", "dir-net"],
     ['192.168.56.16', 8, "255.255.255.0"]
   ]
-},
+}
 }
 
 Vagrant.configure("2") do |config|
@@ -87,7 +96,7 @@ Vagrant.configure("2") do |config|
       end
 
       box.vm.provider "virtualbox" do |v|
-        v.memory = 768
+        v.memory = 1024
         v.cpus = 1
       end
 
@@ -99,6 +108,7 @@ Vagrant.configure("2") do |config|
       if boxname.to_s == "centralServer"
         box.vm.provision "ansible" do |ansible|
           ansible.inventory_path = "ansible/hosts"
+          ansible.compatibility_mode = "2.0"
           ansible.version = "latest"
           ansible.host_key_checking = false
           ansible.playbook = "ansible/main.yml"
@@ -106,6 +116,7 @@ Vagrant.configure("2") do |config|
           ansible.limit = "all"
         end
       end
+
     end
   end
 end
