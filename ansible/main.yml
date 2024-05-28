@@ -1,0 +1,72 @@
+- name: Настройка сети
+  hosts: all
+  tasks:
+    - name: Установка пакетиков ...
+      ansible.builtin.apt:
+        name:
+          - iptables-persistent
+          - knockd
+        state: present
+        update_cache: true
+        autoremove: true
+        force: true
+      tags:
+        - apt install iptables knockd
+    - name: Включаем пропуск транзитных пакетов ...
+      ansible.posix.sysctl:
+        name: net.ipv4.conf.all.forwarding
+        value: '1'
+        state: present
+      when: ('routers' in group_names)
+      tags:
+        - ipv4 forwarding enable
+    - name: Настраиваем маршруты ...
+      ansible.builtin.template:
+        src: "{{ ansible_hostname }}-route"
+        dest: "/etc/network/if-up.d/route"
+        owner: root
+        group: root
+        mode: "0755"
+      tags:
+        - set routes
+    - name: Настраиваем iptables на inetRouter 1 и 2 ...
+      ansible.builtin.template:
+        src: "{{ ansible_hostname }}_rules.v4"
+        dest: "/etc/iptables/rules.v4"
+        owner: root
+        group: root
+        mode: "0644"
+      tags:
+        - set iptables in inetRouter and inetRouter2
+      when: (ansible_hostname == "inetRouter") or (ansible_hostname == "inetRouter2")
+    - name: Настраиваем knockd на inetRouter ...
+      ansible.builtin.template:
+        src: knockd.conf
+        dest: /etc/knockd.conf
+        owner: root
+        group: root
+        mode: "0644"
+      tags:
+        - set knockd on inetRouter
+      when: (ansible_hostname == "inetRouter")
+    - name: Устанавливаем nginx на CentralServer ...
+      ansible.builtin.apt:
+        name:
+          - nginx
+        state: present
+      when: (ansible_hostname == "centralServer")
+    - name: Запуск nginx ...
+      ansible.builtin.systemd_service:
+        name: nginx
+        state: restarted
+        enabled: true
+      when: (ansible_hostname == "centralServer")
+    - name: Запуск knockd ...
+      ansible.builtin.systemd_service:
+        name: knockd
+        state: restarted
+        enabled: true
+      when: (ansible_hostname == "inetRouter")
+    - name: Перезапуск машин
+      ansible.builtin.reboot:
+        reboot_timeout: 600
