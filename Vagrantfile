@@ -1,60 +1,58 @@
-MACHINES = {
-	:"kernel-update" => {
-		:box_name => "generic/debian12",
-		:box_version => "4.3.12",
-		:cpus => 6,
-		:memory => 8192,
-	}
-}
-
 Vagrant.configure("2") do |config|
-	MACHINES.each do |boxname, boxconfig|
-		config.vm.synced_folder ".", "/vagrant"#, disabled: true
-		#config.vm.synced_folder "/mnt/flash/sync", "/mnt/vagrant", disabled: false
-		config.vm.define boxname do |box|
-			box.vm.box = boxconfig[:box_name]
-			box.vm.box_version = boxconfig[:box_version]#"> 4.3.10"
-			box.vm.host_name = boxname.to_s
-			box.vm.provider "virtualbox" do |v|
-				v.memory = boxconfig[:memory]
-				v.cpus = boxconfig[:cpus]
-			end
-		end
-		config.vm.provision "shell", inline: <<-SHELL
-			sudo apt-get update
-			sudo apt-get install -y gcc cmake ncurses-dev libssl-dev bc flex libelf-dev bison git fakeroot build-essential xz-utils lsb-release software-properties-common apt-transport-https ca-certificates curl dwarves dkms
-			#Если раздел /boot слишком маленький, можно удалить предыдущие образы ядра, иначе для нового не хватит свободного места
-			#sudo rm /boot/initrd*
-			#sudo rm /boot/vmlinuz*
-			wget https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.7.tar.xz
-			wget --no-check-certificate 'https://docs.google.com/uc?export=download&id=1MNt-MkbD-am9jkY8WXoT7JbL0XXxHAWc' -O ./VboxGuestAdditions.iso
-			echo "Распаковка архива..."
-			tar xf linux-6.7.tar.xz
-			cd linux-6.7
-			cp -v /boot/config-$(uname -r) .config
-			echo "Сборка ядра..."
-			yes "" | make oldconfig
-			make -j$(($(nproc)+1)) -s
-			sudo make modules_install -s
-			echo "установка, создание образа ядра и обновление GRUB..."
-			sudo make install
-			#sudo update-initramfs -c -k 6.7.0
-			#sudo update-grub
-			#sudo grep gnulinux /boot/grub/grub.cfg | grep "6.7.0' --class" | awk -F"'" '{print $4}' > ./version_of_kernel.txt
-			#sudo export VE=$(cat ./version_of_kernel.txt)
-			#sudo echo "DEFAULT_GRUB=$VE" >> /etc/default/grub
-			echo "Удаление архива и директории с исходниками..."
-			sudo rm -r ./linux-6.7
-			rm linux-6.7.tar.xz
-			echo "Перезагрузка..."
-			sudo shutdown -r now
-			sudo mkdir /mnt/iso
-			sudo mount -o loop ./VboxGuestAdditions.iso /mnt/iso
-			cd /mnt/iso
-			sudo ./autorun.sh
-			sudo mount -t vboxfs mnt_vagrant /vagrant
-			sudo apt autoremove -y
-			uname -r
-		SHELL
-	end
+  if Vagrant.has_plugin?("vagrant-vbguest") then
+    config.vbguest.auto_update = false
+  end
+
+  config.vm.box = "generic/debian12"
+
+  config.vm.provider "virtualbox" do |v|
+    v.memory = 4 * 1024
+    v.cpus = 4
+  end
+
+  config.vm.provision "shell", inline: <<-SHELL
+    set -mx
+    mkdir -p ~root/.ssh
+    cp ~vagrant/.ssh/auth* ~root/.ssh
+    yes "vagrant" | sudo passwd root
+  SHELL
+
+  config.vm.define "client" do |client|
+    client.vm.hostname = "client"
+    client.vm.network "private_network", ip: "192.168.56.20"
+  end
+
+  config.vm.define "server" do |server|
+    server.vm.hostname = "server"
+    server.vm.network "private_network", ip: "192.168.56.10"
+    server.vm.provision "ansible" do |ansible|
+      ansible.inventory_path = "ansible/hosts"
+      ansible.compatibility_mode = "2.0"
+      ansible.version = "latest"
+      ansible.host_key_checking = false
+      ansible.playbook = "ansible/main.yml"
+      #ansible.verbose = "v"
+      ansible.limit = "all"
+    end
+=begin
+
+    server.vm.provision "shell", inline: <<-SHELL
+      apt update && apt install openvpn sshpass -y
+      cd /etc/openvpn
+      yes "" | ssh-keygen -N ""
+      sshpass -p "vagrant" ssh-copy-id -o stricthostkeychecking=no root@192.168.56.20
+      /usr/share/easy-rsa/easyrsa init-pki
+      EASYRSA_BATCH='1'
+      echo 'rasvpn' | /usr/share/easy-rsa/easyrsa build-ca nopass
+      echo 'rasvpn' | /usr/share/easy-rsa/easyrsa gen-req server nopass
+      echo 'yes' | /usr/share/easy-rsa/easyrsa sign-req server server
+      /usr/share/easy-rsa/easyrsa gen-dh
+      openvpn --genkey secret ca.key
+      echo 'client' | /usr/share/easy-rsa/easyrsa gen-req client nopass
+      echo 'yes' | /usr/share/easy-rsa/easyrsa sign-req client client
+      echo 'iroute 10.10.10.0 255.255.255.0' > /etc/openvpn/client/client
+    SHELL
+=end
+  end
+
 end

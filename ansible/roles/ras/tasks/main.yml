@@ -1,0 +1,38 @@
+- name: Установка пакетиков ...
+  ansible.builtin.apt:
+    name:
+      - openvpn
+      - sshpass
+    update_cache: true
+    state: present
+  tags:
+    - apt
+- name: Настройка easy-rsa ...
+  ansible.builtin.script: files/script.sh
+  tags:
+    - easyrsa
+  register: out
+  when: (ansible_hostname == "server")
+#    - name: Вывод команд ...
+#      ansible.builtin.debug:
+#        var: out.stdout_lines
+- name: Копирование файлов сервиса ...
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - {src: "openvpn@{{ ansible_hostname }}.service", dest: "/etc/systemd/system/openvpn@.service"}
+    - {src: "{{ ansible_hostname }}_ras.conf", dest: "/etc/openvpn/{{ ansible_hostname }}.conf"}
+  tags:
+    - copy
+- name: Запуск служб ...
+  ansible.builtin.systemd_service:
+    name: "openvpn@{{ ansible_hostname }}.service"
+    enabled: true
+    state: started
+    daemon_reload: true
+  tags:
+    - service

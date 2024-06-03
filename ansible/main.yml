@@ -1,0 +1,7 @@
+- name: Работа с VPN
+  hosts: all
+  roles:
+    - tun-tap
+#    - ras
+  tags:
+    - VPN

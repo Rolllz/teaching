@@ -1,0 +1,30 @@
+- name: Установка пакетиков ...
+  ansible.builtin.apt:
+    name:
+      - openvpn
+      - iperf3
+    update_cache: true
+    state: present
+  tags:
+    - apt
+- name: Копирование файлов сервиса ...
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - {src: "openvpn@{{ ansible_hostname }}.service", dest: "/etc/systemd/system/openvpn@.service"}
+    - {src: "{{ ansible_hostname }}.conf", dest: "/etc/openvpn/server.conf"}
+    - {src: "static.key", dest: "/etc/openvpn/static.key"}
+  tags:
+    - copy
+- name: Запуск служб ...
+  ansible.builtin.systemd_service:
+    name: "openvpn@server.service"
+    enabled: true
+    state: started
+    daemon_reload: true
+  tags:
+    - service
