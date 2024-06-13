@@ -1,60 +1,82 @@
-MACHINES = {
-	:"kernel-update" => {
-		:box_name => "generic/debian12",
-		:box_version => "4.3.12",
-		:cpus => 6,
-		:memory => 8192,
-	}
-}
+debian = "generic/debian12"
+debianv = "latest"
 
 Vagrant.configure("2") do |config|
-	MACHINES.each do |boxname, boxconfig|
-		config.vm.synced_folder ".", "/vagrant"#, disabled: true
-		#config.vm.synced_folder "/mnt/flash/sync", "/mnt/vagrant", disabled: false
-		config.vm.define boxname do |box|
-			box.vm.box = boxconfig[:box_name]
-			box.vm.box_version = boxconfig[:box_version]#"> 4.3.10"
-			box.vm.host_name = boxname.to_s
-			box.vm.provider "virtualbox" do |v|
-				v.memory = boxconfig[:memory]
-				v.cpus = boxconfig[:cpus]
-			end
-		end
-		config.vm.provision "shell", inline: <<-SHELL
-			sudo apt-get update
-			sudo apt-get install -y gcc cmake ncurses-dev libssl-dev bc flex libelf-dev bison git fakeroot build-essential xz-utils lsb-release software-properties-common apt-transport-https ca-certificates curl dwarves dkms
-			#Если раздел /boot слишком маленький, можно удалить предыдущие образы ядра, иначе для нового не хватит свободного места
-			#sudo rm /boot/initrd*
-			#sudo rm /boot/vmlinuz*
-			wget https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.7.tar.xz
-			wget --no-check-certificate 'https://docs.google.com/uc?export=download&id=1MNt-MkbD-am9jkY8WXoT7JbL0XXxHAWc' -O ./VboxGuestAdditions.iso
-			echo "Распаковка архива..."
-			tar xf linux-6.7.tar.xz
-			cd linux-6.7
-			cp -v /boot/config-$(uname -r) .config
-			echo "Сборка ядра..."
-			yes "" | make oldconfig
-			make -j$(($(nproc)+1)) -s
-			sudo make modules_install -s
-			echo "установка, создание образа ядра и обновление GRUB..."
-			sudo make install
-			#sudo update-initramfs -c -k 6.7.0
-			#sudo update-grub
-			#sudo grep gnulinux /boot/grub/grub.cfg | grep "6.7.0' --class" | awk -F"'" '{print $4}' > ./version_of_kernel.txt
-			#sudo export VE=$(cat ./version_of_kernel.txt)
-			#sudo echo "DEFAULT_GRUB=$VE" >> /etc/default/grub
-			echo "Удаление архива и директории с исходниками..."
-			sudo rm -r ./linux-6.7
-			rm linux-6.7.tar.xz
-			echo "Перезагрузка..."
-			sudo shutdown -r now
-			sudo mkdir /mnt/iso
-			sudo mount -o loop ./VboxGuestAdditions.iso /mnt/iso
-			cd /mnt/iso
-			sudo ./autorun.sh
-			sudo mount -t vboxfs mnt_vagrant /vagrant
-			sudo apt autoremove -y
-			uname -r
-		SHELL
-	end
+
+  if Vagrant.has_plugin?("vagrant-vbguest") then
+    config.vbguest.auto_update = false
+  end
+
+  config.vm.box = debian
+
+  config.vm.provider "virtualbox" do |v|
+    v.memory = 1024
+    v.cpus = 1
+  end
+
+  config.vm.provision "shell", inline: <<-SHELL
+    set -x
+    mkdir -p ~root/.ssh
+    cp ~vagrant/.ssh/auth* ~root/.ssh
+    yes "vagrant" | sudo passwd root
+    #apt update && apt install net-tools tcpdump ifenslave traceroute bridge-utils -y
+  SHELL
+
+  config.vm.define "inetRouter" do |inetRouter|
+    inetRouter.vm.network "private_network", adapter: 2, auto_config: false, virtualbox__intnet: "router-net"
+    inetRouter.vm.network "private_network", adapter: 3, auto_config: false, virtualbox__intnet: "router-net"
+    inetRouter.vm.network "private_network", adapter: 8, ip: "192.168.56.10"
+    inetRouter.vm.hostname = "inetRouter"
+  end
+
+  config.vm.define "centralRouter" do |centralRouter|
+    centralRouter.vm.network "private_network", adapter: 2, auto_config: false, virtualbox__intnet: "router-net"
+    centralRouter.vm.network "private_network", adapter: 3, auto_config: false, virtualbox__intnet: "router-net"
+    centralRouter.vm.network "private_network", ip: "192.168.255.9", adapter: 6, netmask: "255.255.255.252", virtualbox__intnet: "office1-central"
+    centralRouter.vm.network "private_network", adapter: 8, ip: "192.168.56.11"
+    centralRouter.vm.hostname = "centralRouter"
+  end
+
+  config.vm.define "office1Router" do |office1Router|
+    office1Router.vm.network "private_network", ip: '192.168.255.10', adapter: 2, netmask: "255.255.255.252", virtualbox__intnet: "office1-central"
+    office1Router.vm.network "private_network", adapter: 3, auto_config: false, virtualbox__intnet: "vlan1"
+    office1Router.vm.network "private_network", adapter: 4, auto_config: false, virtualbox__intnet: "vlan1"
+    office1Router.vm.network "private_network", adapter: 5, auto_config: false, virtualbox__intnet: "vlan2"
+    office1Router.vm.network "private_network", adapter: 6, auto_config: false, virtualbox__intnet: "vlan2"
+    office1Router.vm.network "private_network", adapter: 8, ip: "192.168.56.20"
+    office1Router.vm.hostname = "office1Router"
+  end
+
+  config.vm.define "testClient1" do |testClient1|
+    testClient1.vm.network "private_network", adapter: 2, auto_config: false, virtualbox__intnet: "testvlan"
+    testClient1.vm.network "private_network", adapter: 8, ip: "192.168.56.21"
+    testClient1.vm.hostname = "testClient1"
+  end
+
+  config.vm.define "testServer1" do |testServer1|
+    testServer1.vm.network "private_network", adapter: 2, auto_config: false, virtualbox__intnet: "testvlan"
+    testServer1.vm.network "private_network", adapter: 8, ip: "192.168.56.22"
+    testServer1.vm.hostname = "testServer1"
+  end
+
+  config.vm.define "testClient2" do |testClient2|
+    testClient2.vm.network "private_network", adapter: 2, auto_config: false, virtualbox__intnet: "testvlan"
+    testClient2.vm.network "private_network", adapter: 8, ip: "192.168.56.31"
+    testClient2.vm.hostname = "testClient2"
+  end
+
+  config.vm.define "testServer2" do |testServer2|
+    testServer2.vm.network "private_network", adapter: 2, auto_config: false, virtualbox__intnet: "testvlan"
+    testServer2.vm.network "private_network", adapter: 8, ip: "192.168.56.32"
+    testServer2.vm.hostname = "testServer2"
+    testServer2.vm.provision "ansible" do |ansible|
+      ansible.playbook = "ansible/main.yml"
+      ansible.compatibility_mode = "2.0"
+      ansible.version = "2.16.7"
+      ansible.inventory_path = "hosts"
+      ansible.host_key_checking = "false"
+      ansible.limit = "all"
+    end
+  end
+
 end
