@@ -1,0 +1,14 @@
+auto bond0
+
+iface bond0 inet static
+    address 192.168.255.{% if ansible_hostname == "inetRouter" %}
+1
+{% else %}
+2
+{% endif %}
+    netmask 255.255.255.252
+    network 192.168.255.0
+    bond-slaves eth1 eth2
+    bond-mode active-backup
+    bond-miimon 100
+    bond-fail-over-mac 1

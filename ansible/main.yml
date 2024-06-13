@@ -1,0 +1,84 @@
+- name: Настройка VLAN и LACP в Linux
+  become: true
+  hosts: all
+  tasks:
+    - name: Установка пакетиков ...
+      ansible.builtin.apt:
+        name:
+          - tcpdump
+          - net-tools
+          - traceroute
+          - ifenslave
+        state: present
+        update_cache: true
+      tags:
+        - packages
+    - name: Копирование конфига bond-интерфейса ...
+      ansible.builtin.template:
+        src: ifcfg-bond0.j2
+        dest: /etc/network/interfaces.d/ifcfg-bond0
+        owner: root
+        group: root
+        mode: "0644"
+      tags:
+        - bond
+      when: (ansible_hostname == "centralRouter" or ansible_hostname == "inetRouter")
+    - name: Копирование конфига vlan-интерфейса ...
+      ansible.builtin.template:
+        src: ifcfg-eth1.j2
+        dest: /etc/network/interfaces.d/ifcfg-eth1.{{ vlan_id }}
+        owner: root
+        group: root
+        mode: "0644"
+      tags:
+        - vlan
+      when: ('servers' in group_names)
+    - name: Настройка nftables ...
+      ansible.builtin.copy:
+        src: nftables.conf
+        dest: /etc/nftables.conf
+        owner: root
+        group: root
+        mode: "0755"
+      tags:
+        - nftables
+      when: (ansible_hostname == "inetRouter")
+    - name: Запуск nftables ...
+      ansible.builtin.systemd_service:
+        name: nftables
+        state: started
+        enabled: true
+        daemon_reload: true
+      when: (ansible_hostname == "inetRouter")
+      tags:
+        - nftables
+    - name: Включение модулей для работы VLAN ...
+      ansible.builtin.template:
+        src: modules.j2
+        dest: /etc/modules
+        owner: root
+        group: root
+        mode: "0644"
+      tags:
+        - modprobe
+    - name: Включение маршрутизации транзитных пакетов ...
+      ansible.builtin.replace:
+        path: /etc/sysctl.conf
+        regexp: "#net.ipv4.ip_forward=1"
+        replace: "net.ipv4.ip_forward=1"
+      tags:
+        - forward
+    - name: Настройка маршрутизации между машинами ...
+      ansible.builtin.copy:
+        src: "{{ ansible_hostname }}-route"
+        dest: /etc/network/if-up.d/route
+        owner: root
+        group: root
+        mode: "0755"
+      tags:
+        - routing
+    - name: Перезапуск виртуальных машин ...
+      ansible.builtin.reboot:
+        reboot_timeout: 600
+      tags:
+        - reboot

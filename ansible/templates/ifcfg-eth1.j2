@@ -1,0 +1,7 @@
+auto eth1.{{ vlan_id }}
+iface eth1.{{ vlan_id }} inet static
+        address {{ vlan_ip }}
+        netmask 255.255.255.0
+        network 10.10.10.0
+        broadcast 10.10.10.255
+        vlan-raw-device eth1
