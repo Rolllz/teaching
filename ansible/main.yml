@@ -75,6 +75,7 @@
         owner: root
         group: root
         mode: "0755"
+      when: ('routers' in group_names)
       tags:
         - routing
     - name: Перезапуск виртуальных машин ...
