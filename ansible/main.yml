@@ -1,0 +1,92 @@
+- name: Настройка FreeIPA
+  hosts: all
+  tasks:
+    - name: Disable mirrorlist
+      ansible.builtin.shell:
+        executable: /bin/bash
+        cmd: sed -i "s/mirrorlist/#mirrorlist/g" /etc/yum.repos.d/*.repo
+      changed_when: false
+    - name: Enable baseurl
+      ansible.builtin.shell:
+        executable: /bin/bash
+        cmd: sed -i "s/#baseurl=http:\/\/mirror/baseurl=http:\/\/vault/g" /etc/yum.repos.d/*.repo
+      changed_when: false
+    - name: Set filewalld up
+      ansible.builtin.systemd_service:
+        name: firewalld
+        state: restarted
+        enabled: true
+    - name: Add LDAP service to firewalld
+      ansible.posix.firewalld:
+        service: "{{ item }}"
+        state: enabled
+        permanent: true
+      loop:
+        - freeipa-ldap
+        - freeipa-ldaps
+    - name: Restart firewalld
+      ansible.builtin.systemd_service:
+        name: firewalld
+        state: restarted
+        enabled: true
+    - name: Disable SElinux now
+      ansible.builtin.command: setenforce 0
+      changed_when: false
+    - name: Set up timezone
+      community.general.timezone:
+        name: "Europe/Moscow"
+    - name: Enable chrony
+      ansible.builtin.systemd_service:
+        name: chronyd
+        state: restarted
+        enabled: true
+    - name: Change /etc/hosts
+      ansible.builtin.template:
+        src: hosts.j2
+        dest: /etc/hosts
+        owner: root
+        group: root
+        mode: "0644"
+    - name: Disable SElinux
+      ansible.posix.selinux:
+        state: disabled
+- name: Настройка сервера
+  hosts: server
+  tasks:
+    - name: Install idm
+      ansible.builtin.yum:
+        name: "@idm:DL1"
+        update_cache: true
+        update_only: false
+        state: present
+      tags:
+        - update
+    - name: Install ipa-server package
+      ansible.builtin.yum:
+        name: ipa-server
+        update_cache: true
+        update_only: false
+        state: present
+      tags:
+        - update
+    - name: Установка сервера
+      ansible.builtin.script:
+        cmd: scripts/server.sh
+        executable: /bin/bash
+- name: Настройка клиентов
+  hosts: client1, client2
+  tasks:
+    - name: Install client package
+      ansible.builtin.yum:
+        name: freeipa-client
+        state: present
+        update_cache: true
+        update_only: false
+      tags:
+        - client
+    - name: Install ipa client
+      ansible.builtin.script:
+        cmd: scripts/client.sh
+        executable: /bin/bash
+      tags:
+        - client
