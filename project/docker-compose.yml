@@ -1,12 +1,3 @@
-x-config: &backend
-  image: app_backend
-  volumes:
-    - .:/home/app:cached
-    - bundle:/usr/local/bundle
-    - .dockerdev/.psqlrc:/root/.psqlrc:ro
-  env_file:
-    - .env
-
 services:
   database:
     image: mysql:latest # используем готовый образ mysql от разработчиков
