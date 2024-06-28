@@ -1,0 +1,74 @@
+- name: Set Dynamic web app with nginx-proxy
+  hosts: DynamicWeb # имя хоста, который мы создадим Vagrant`om
+  become: true # Установка Docker через sudo
+  gather_facts: false
+  tasks: # Перечисляем задачи которые выполнит наш playbook
+    - name: Install docker packages
+      ansible.builtin.apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+        state: present
+        update_cache: true
+      tags:
+        - docker
+    - name: Add docker pub key
+      ansible.builtin.uri:
+        url: 'https://download.docker.com/linux/debian/gpg'
+        method: GET
+        dest: /etc/apt/keyrings/docker.asc
+        mode: "0755"
+        owner: root
+        group: root
+        follow_redirects: safe
+      tags:
+        - docker
+    - name: Add docker.list to /etc/apt/sources.list.d/
+      ansible.builtin.copy:
+        src: docker.list
+        dest: /etc/apt/sources.list.d/docker.list
+        owner: root
+        group: root
+        mode: "0644"
+      tags:
+        - docker
+    - name: Update packages
+      ansible.builtin.apt:
+        update_cache: true
+      tags:
+        - docker
+    - name: Install docker
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+      tags:
+        - docker
+    - name: Add remote "vagrant" user to "docker" group
+      ansible.builtin.user:
+        name: vagrant
+        group: "docker"
+        append: true
+      tags:
+        - docker
+    - name: Reset ssh connection
+      ansible.builtin.meta: reset_connection
+    - name: Copy folder of compose
+      ansible.builtin.copy:
+        src: ./project
+        dest: /home/vagrant
+        owner: vagrant
+        group: vagrant
+        mode: "0777"
+    - name: Run container
+      ansible.builtin.command:
+        cmd: "docker compose -f docker-compose.yml up -d"
+        chdir: /home/vagrant/project
+      register: my_output
+      changed_when: my_output.rc != 0
