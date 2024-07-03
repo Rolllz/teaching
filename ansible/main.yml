@@ -1,0 +1,159 @@
+- name: Install Percona servers
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Install gnupg2 and python3-pymysql
+      ansible.builtin.apt:
+        name:
+          - gnupg2
+          - python3-pymysql
+        update_cache: true
+        state: present
+      tags:
+        - apt
+    - name: Install Percona-release
+      ansible.builtin.apt:
+        deb: "https://repo.percona.com/apt/percona-release_latest.generic_all.deb"
+        update_cache: true
+      tags:
+        - apt
+    - name: Enable repository for percona-server-server-5.7
+      ansible.builtin.command:
+        cmd: percona-release enable ps-57
+        creates: /etc/apt/sources.list.d/percona-ps-57-release.list
+      tags:
+        - apt
+    - name: Install Percona-server
+      ansible.builtin.apt:
+        name: percona-server-server-5.7
+        state: present
+        update_cache: true
+      tags:
+        - apt
+- name: Work with Percona
+  hosts: master
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Create database
+      community.mysql.mysql_db:
+        name: bet
+        state: present
+        login_user: root
+        login_password: ''
+        login_host: localhost
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+    - name: Create user
+      community.mysql.mysql_user:
+        name: repl
+        password: "!OtusLinux2018"
+        state: present
+        host: "%"
+        priv: "*.*:REPLICATION SLAVE"
+        login_user: root
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+      tags:
+        sql
+    - name: Create UDF from Percona Toolkit
+      community.mysql.mysql_query:
+        query:
+          - "CREATE FUNCTION fnv1a_64 RETURNS INTEGER SONAME 'libfnv1a_udf.so'"
+          - "CREATE FUNCTION fnv_64 RETURNS INTEGER SONAME 'libfnv_udf.so'"
+          - "CREATE FUNCTION murmur_hash RETURNS INTEGER SONAME 'libmurmur_udf.so'"
+        login_user: root
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+        single_transaction: true
+      tags:
+        - sql
+    - name: Copy dump file to master
+      ansible.builtin.copy:
+        src: bet.dmp
+        dest: /tmp/bet.dmp
+        mode: "0755"
+      tags:
+        - sql
+    - name: Restore database from dump
+      community.mysql.mysql_db:
+        state: import
+        name: bet
+        target: /tmp/bet.dmp
+        force: true
+        login_user: root
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+      tags:
+        - sql
+    - name: Create dump from database
+      community.mysql.mysql_db:
+        name: all
+        state: dump
+        target: /tmp/dump.sql
+        ignore_tables:
+          - bet.v_same_event
+          - bet.events_on_demand
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+      tags:
+        - sql
+    - name: Copy dump file to host
+      ansible.builtin.fetch:
+        src: /tmp/dump.sql
+        dest: dump.sql
+      tags:
+        - sql
+- name: Set replication
+  hosts: all
+  become: true
+  tasks:
+    - name: Copy configs to machines
+      ansible.builtin.template:
+        src: "{{ item }}"
+        dest: /etc/mysql/conf.d/{{ item | basename | regex_replace('.j2', '') }}
+        owner: root
+        group: root
+        mode: "0644"
+      with_fileglob:
+        - "templates/*.j2"
+    - name: Restart mysql service
+      ansible.builtin.systemd_service:
+        name: mysql
+        state: restarted
+        enabled: true
+        daemon_reload: true
+      tags:
+        - systemctl
+- name: Set replication settings on slave
+  hosts: slave
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Copy dump file to slave
+      ansible.builtin.copy:
+        src: dump.sql/master/tmp/dump.sql
+        dest: /tmp/dump.sql
+        mode: "0755"
+      tags:
+        - sql
+    - name: Restore database on slave
+      community.mysql.mysql_db:
+        name: all
+        state: import
+        target: /tmp/dump.sql
+        login_user: root
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+        force: true
+      tags:
+        - restore
+    - name: Set replication settings
+      community.mysql.mysql_replication:
+        login_user: root
+        primary_host: 192.168.56.10
+        primary_user: repl
+        primary_password: "!OtusLinux2018"
+        primary_auto_position: true
+        mode: changeprimary
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+    - name: Start replication
+      community.mysql.mysql_replication:
+        mode: startreplica
+        login_user: root
+        login_unix_socket: /var/run/mysqld/mysqld.sock
