@@ -42,8 +42,8 @@ percona-release enable ps-57
 
 Скриншот демонстрации работы репликации в консоли:
 
-![alt text](replica_in_binlogs.png)
+![alt text](replica_in_console.png)
 
 Скриншот демонстрации работы репликации в бинлогах:
 
-![alt text](http://url/to/img.png)
+![alt text](replica_in_binlogs.pgn)
