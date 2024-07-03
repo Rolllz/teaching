@@ -44,7 +44,8 @@ percona-release enable ps-57
 
 На сайте разработчика при установке указана следующая информация:
 
-```Дистрибутив Percona Server for MySQL содержит несколько полезных пользовательских функций (UDF) из Percona Toolkit. После завершения установки необходимо выполнить следующие команды, чтобы создать эти функции:```
+```The Percona Server for MySQL distribution contains several useful User Defined Functions (UDF) from Percona Toolkit. After the installation completes, run the following commands to create these functions:```
+```(Дистрибутив Percona Server for MySQL содержит несколько полезных пользовательских функций (UDF) из Percona Toolkit. После завершения установки необходимо выполнить следующие команды, чтобы создать эти функции:)```
 
 ```
 $ mysql -e "CREATE FUNCTION fnv1a_64 RETURNS INTEGER SONAME 'libfnv1a_udf.so'"
