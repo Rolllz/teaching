@@ -121,6 +121,15 @@
     mode: '0755'
   when: (ansible_hostname == "barman")
 
+- name: Barman cron
+  become_user: barman
+  ansible.builtin.shell:
+    cmd: barman cron
+    executable: /bin/bash
+  register: ssh_keys
+  changed_when: ssh_keys.rc != 0
+  when: (ansible_hostname == "barman")
+
 - name: Barman switch-wal node1
   become_user: barman
   ansible.builtin.shell:
@@ -136,13 +145,13 @@
     cmd: barman switch-xlog --force --archive node1
     executable: /bin/bash
   register: ssh_keys
-  changed_when: ssh_keys.rc != 0
+  changed_when: false
   when: (ansible_hostname == "barman")
 
-- name: Barman cron
+- name: Start backup
   become_user: barman
   ansible.builtin.shell:
-    cmd: barman cron
+    cmd: barman backup node1
     executable: /bin/bash
   register: ssh_keys
   changed_when: ssh_keys.rc != 0
