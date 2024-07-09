@@ -1,0 +1,20 @@
+- name: Install packages
+  hosts: all
+  become: true
+  roles:
+    - install
+- name: Set up replication on node1 and node2
+  hosts: node1, node2
+  become: true
+  roles:
+    - node1
+- name: Set up PostgreSQL only on node2
+  hosts: node2
+  become: true
+  roles:
+    - node2
+- name: Set up barman backup
+  hosts: node1, barman
+  become: true
+  roles:
+    - barman

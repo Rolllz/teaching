@@ -1,0 +1,34 @@
+- name: Stop PostgreSQL service
+  ansible.builtin.systemd_service:
+    name: postgresql
+    state: stopped
+  tags:
+    - node2
+- name: Move data directory
+  ansible.builtin.copy:
+    remote_src: true
+    src: /var/lib/postgresql/16/main/
+    dest: /var/lib/postgresql/16/main.bak/
+    owner: postgres
+    group: postgres
+    mode: "0755"
+- name: Remove files from data catalog
+  ansible.builtin.file:
+    path: /var/lib/postgresql/16/main/
+    state: absent
+  tags:
+    - node2
+- name: Copy files from master to slave
+  become_user: postgres
+  ansible.builtin.expect:
+    command: 'pg_basebackup -h {{ master_ip }} -U replicator -p 5432 -D /var/lib/postgresql/16/main/ -R -P'
+    responses:
+      '.*Password*': "{{ replicator_password }}"
+  tags:
+    - node2
+- name: Start postgresql-server on node2
+  ansible.builtin.systemd_service:
+    name: postgresql
+    state: started
+  tags:
+    - node2

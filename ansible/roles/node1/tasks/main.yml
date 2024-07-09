@@ -1,0 +1,27 @@
+- name: Copy .conf files to nodes
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "/etc/postgresql/16/main/{{ item.dest }}"
+    owner: postgres
+    group: postgres
+    mode: "{{ item.mode }}"
+  loop:
+    - {src: postgresql.conf.j2, mode: "0644", dest: postgresql.conf}
+    - {src: pg_hba.conf.j2, mode: "0640", dest: pg_hba.conf}
+- name: Restart PostgreSQL service
+  ansible.builtin.systemd_service:
+    name: postgresql
+    state: restarted
+    daemon_reload: true
+    enabled: true
+  tags:
+    - restart
+- name: Create replication user
+  community.postgresql.postgresql_user:
+    name: replicator
+    password: Otus2022!
+    encrypted: true
+    role_attr_flags: REPLICATION
+    expires: infinity
+  tags:
+    - conf
